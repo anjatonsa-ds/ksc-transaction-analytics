@@ -27,11 +27,10 @@ Ulazak u Bash shell kontejnera i listanje topica:
 docker exec -it kafka bash
 kafka-topics --bootstrap-server kafka:29092 --list
 ```
-Veza je uspostavljena, tema transaction_events je automatski kreirana od strane producer-a, što potvrđuje da Kafka radi.
+Veza je uspostavljena, topic *transaction_events* je automatski kreiran od strane producer-a, što potvrđuje da Kafka radi.
 
 #### ClickHouse (8123/9000):
 HTTP interfejs je dostupan na http://localhost:8123.
-Port sluša, spreman za Superset konekciju.
 
 #### Superset (8088):
 Superset login stranica je dostupna na http://localhost:8088.
@@ -39,8 +38,8 @@ Superset login stranica je dostupna na http://localhost:8088.
 
 3. Kreiranje i pokretanje Producer-a
 
-Kreirani fajlovi producer/Dockerfile i producer/app.py za simulaciju transakcija.
-Producer servis je uspešno pokrenut, omogućena je konekcija sa kafka brokerom i definisana je fukncija za generisanje random podataka vezanih za transakciju. Simulirano je slanje poruka na topic transaction_events.
+Kreirani fajlovi *producer/Dockerfile* i *producer/app.py* za simulaciju transakcija.
+Producer servis je uspešno pokrenut, omogućena je konekcija sa kafka brokerom i definisana je fukncija za generisanje random podataka vezanih za transakciju. Simulirano je slanje poruka na topic *transaction_events*.
 
 4. Provera poruka 
 Logovi producer servisa koji potvrdjuju slanje poruka:
