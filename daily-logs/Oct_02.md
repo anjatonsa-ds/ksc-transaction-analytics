@@ -10,6 +10,7 @@ Mapirani portovi za hosta su: 9092 (Kafka), 2181 (ZooKeeper), 8123/9000 (ClickHo
 
 
 2. Verifikacija Servisa
+
 Svi servisi su provereni i verifikovana je njihova dostupnost i funkcionalnost.
 
 ### Status kontejnera
