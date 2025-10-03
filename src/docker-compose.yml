@@ -35,12 +35,15 @@ services:
     ports:
       - "8123:8123" # HTTP interface for Superset and clients
       - "9000:9000" # ClickHouse native client interface
+    environment:
+      CLICKHOUSE_USER: ch_user
+      CLICKHOUSE_PASSWORD: ch_password
     ulimits:
       nofile:
         soft: 262144
         hard: 262144
     volumes:
-      # Optional: Mount your custom ClickHouse configs if needed
+      - ./clickhouse/init_scripts/:/docker-entrypoint-initdb.d/
       #- ./clickhouse/config.xml:/etc/clickhouse-server/config.xml
       #- ./clickhouse/users.xml:/etc/clickhouse-server/users.xml
       - clickhouse_data:/var/lib/clickhouse # Persistent data volume
@@ -73,6 +76,22 @@ services:
     environment:
       KAFKA_BROKER_URL: kafka:29092
       KAFKA_TOPIC: transaction_events
+  
+  consumer:
+    build:
+      context: ./consumer
+      dockerfile: Dockerfile
+    container_name: consumer
+    restart: on-failure
+    depends_on:
+      - kafka
+      - clickhouse
+    environment:
+      KAFKA_BROKER_URL: kafka:29092
+      KAFKA_TOPIC: transaction_events
+      CH_HOST: clickhouse
+      CH_USER: ch_user
+      CH_PASSWORD: ch_password
 
 volumes:
   clickhouse_data:

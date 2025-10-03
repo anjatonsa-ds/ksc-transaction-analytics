@@ -6,7 +6,6 @@ import uuid
 from kafka import KafkaProducer
 from faker import Faker
 
-# Konfiguracija
 KAFKA_BROKER_URL = os.environ.get('KAFKA_BROKER_URL')
 KAFKA_TOPIC = os.environ.get('KAFKA_TOPIC', 'transaction_events')
 
@@ -41,7 +40,7 @@ def generate_event_data():
         "currency": fake.currency_code(),
         "amount": random.randint(10, 5000),
         "event_time": time.time(),
-        "metadata": {"sport":"football","market":"1x2"}
+        "metadata": "some metadata"
     }
 
 
