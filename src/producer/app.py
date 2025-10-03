@@ -53,7 +53,7 @@ def start_streaming():
             event_data = generate_event_data()
             
             if event_data:
-                key = str(event_data['event_id']).encode('utf-8')
+                key = str(event_data['user_id']).encode('utf-8')
 
                 producer.send(
                     topic=KAFKA_TOPIC,
