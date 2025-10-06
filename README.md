@@ -8,5 +8,4 @@ docker compose up
 ``` 
 
 ## ClickHouse Web SQL UI
-
 http://localhost:8123

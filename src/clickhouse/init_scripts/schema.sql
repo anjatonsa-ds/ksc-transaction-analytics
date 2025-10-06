@@ -18,14 +18,16 @@ CREATE TABLE IF NOT EXISTS transaction_events (
     product     LowCardinality(String),
     tx_type     LowCardinality(String),
     currency    LowCardinality(String),
-    amount      UInt32,
+    amount      Int32,
     event_time  DateTime64(3),  
-    metadata    String
+    metadata    String,
+    is_valid    Bool DEFAULT true
 )
 ENGINE = ReplacingMergeTree() 
 ORDER BY (event_id, event_time);
 
 -- Materialized View
+/*
 CREATE MATERIALIZED VIEW IF NOT EXISTS transaction_events_mv TO transaction_events
 AS SELECT
     JSONExtractString(value,'event_id') AS event_id,
@@ -38,3 +40,4 @@ AS SELECT
     toDateTime64(JSONExtractFloat(value, 'event_time'), 3) AS event_time, 
     JSONExtractString(value, 'metadata') AS metadata
 FROM staging_transaction_events;
+*/

@@ -3,7 +3,7 @@ import json
 import time, datetime
 from kafka import KafkaConsumer
 from clickhouse_driver import Client
-
+from iso4217 import Currency
 
 KAFKA_TOPIC = os.environ.get('KAFKA_TOPIC', 'transaction_events')
 KAFKA_BROKER_URL = os.environ.get('KAFKA_BROKER_URL')
@@ -52,32 +52,54 @@ def get_clickhouse_client():
         print(f"Greška pri povezivanju na ClickHouse: {e}")
         exit(1)
 
+def is_iso4217_currency_code(code):
+    try:
+        Currency(code)
+        return True
+    except ValueError:
+        return False
+    
+def validate_and_transform_row(data):
+    data['is_valid'] = True
+
+    #validacija valuta
+    if not is_iso4217_currency_code(data['currency']):
+        data['currency'] = 'RSD'
+
+    #provera negativnih iznosa
+    if data['amount'] < 0 and not data['tx_type']=='deposit':
+        data['is_valid'] = False
+
+    #timestamp konverzija
+    event_time_dt = datetime.datetime.fromtimestamp(data['event_time'], tz=datetime.timezone.utc)
+    
+    row = (
+        data['event_id'],
+        data['user_id'],
+        data['session_id'],
+        data['product'],
+        data['tx_type'],
+        data['currency'],
+        data['amount'],
+        event_time_dt,
+        data['metadata'],
+        data['is_valid']
+
+    )
+    return row
+
 def parse_and_insert_batch(consumer, client, batch):
     print("Parse and insert function")
     rows_to_insert = []
     
-    column_names = [
-         'event_id', 'user_id', 'session_id', 'product', 
-        'tx_type', 'currency', 'amount', 'event_time', 'metadata'
-    ]
+    column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata', 'is_valid']
     
     for message in batch:
         try:
             data = message.value 
-            
-            event_time_dt = datetime.datetime.fromtimestamp(data['event_time'], tz=datetime.timezone.utc)
-            row = (
-                data['event_id'],
-                data['user_id'],
-                data['session_id'],
-                data['product'],
-                data['tx_type'],
-                data['currency'],
-                data['amount'],
-                event_time_dt,
-                data['metadata']
-            )
-            rows_to_insert.append(row)
+            row = validate_and_transform_row(data)
+            if row:
+                rows_to_insert.append(row)  
             
         except Exception as e:
             print(f"Greška pri parsiranju poruke: {e}. Poruka: {message.value}")
