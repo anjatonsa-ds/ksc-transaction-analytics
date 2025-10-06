@@ -7,6 +7,6 @@ Cilj ovog projekta je kreiranje test analitičkog pipeline-a koji može da prati
 docker compose up
 ``` 
 
-## Clickhouse WEB SQL UI
+## ClickHouse Web SQL UI
 
 http://localhost:8123
