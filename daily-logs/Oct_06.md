@@ -1,6 +1,6 @@
 # Dnevnik Rada 
 ## 🎯 Fokus Dana 
-Tranzicija sa privremenog Python batch konzumenta na stabilni ClickHouse Materialized View (MV). Potvrda end-to-end toka podataka (Kafka → MV → Tabela) i uspostavljanje ispravne logike parsiranja milisekundi i JSON objekata.
+Omogućen upis poruka na 2 načina, pomoću Python consumer servisa i koristeći ClickHouse Materialized View (MV). Potvrda end-to-end toka podataka (Kafka → MV → Tabela). Uvođenje osnovnih transformacija i pravila kvaliteta podataka.
 
 ## 🛠 Izvršeni Zadaci
 ### 1. Batch upis 
@@ -12,8 +12,8 @@ Pristupanjem Web SQL UI za ClickHouse (http://localhost:8123/, potrebno je uneti
 
 ![SHOW TABLES](assets/oct06_ch_input_confirmed.png)
 
-### 2. Upis pomoću Kafka engine and Materialized views
+### 2. Upis pomoću Kafka engine-a and Materialized views
 
-Promenjen je kafka_format u *JSONAsString'* kako bi u *staging_transaction_events* tabeli bila zapamćena cela JSON poruka kao string, radi otpornosti na eventualnu promenu šeme. Za izdvajanje i konvertovanje podataka zadužen je *transaction_events_mv* materialized view, kojim se vrši unos u *transaction_events* tabelu.
+Promenjen je kafka_format u *JSONAsString* kako bi u *staging_transaction_events* tabeli bila zapamćena cela JSON poruka kao string, radi otpornosti na eventualnu promenu šeme. Za izdvajanje i konvertovanje podataka zadužen je *transaction_events_mv* materialized view, kojim se vrši unos u *transaction_events* tabelu. Upis je potvrđen na isti način kao u prethodnom koraku.
 
-
+### 3. Osnovne transformacije i prvera kvaliteta podataka
