@@ -56,8 +56,6 @@ Sistem je izvršio proveru i označio transakciju kao nevažeću jer je u pitanj
 
 Poruka sa negativnom vrednošću *amount* koja je tipa *bet* je takodjetransakcija koja se označava kao nevažeća.
 
-
-
 #### Testiranje idempotentnosti inserta
 Sledeća poruka je poslata 3 puta kako bi se simuliralo slanje transakcije sa istim *event_id*-om. 
 ```json
