@@ -7,7 +7,7 @@ SETTINGS
     kafka_broker_list = 'kafka:29092',           
     kafka_topic_list = 'transaction_events',          
     kafka_group_name = 'clickhouse_consumer_group',
-    kafka_format = 'JSONEachRow',                
+    kafka_format = 'JSONAsString',                
     kafka_num_consumers = 1;
 
 -- Target tabela
@@ -19,14 +19,13 @@ CREATE TABLE IF NOT EXISTS transaction_events (
     tx_type     LowCardinality(String),
     currency    LowCardinality(String),
     amount      UInt32,
-    event_time  DateTime64(3),              
+    event_time  DateTime64(3),  
     metadata    String
 )
-ENGINE = MergeTree() 
+ENGINE = ReplacingMergeTree() 
 ORDER BY (event_id, event_time);
 
 -- Materialized View
-/*
 CREATE MATERIALIZED VIEW IF NOT EXISTS transaction_events_mv TO transaction_events
 AS SELECT
     JSONExtractString(value,'event_id') AS event_id,
@@ -39,4 +38,3 @@ AS SELECT
     toDateTime64(JSONExtractFloat(value, 'event_time'), 3) AS event_time, 
     JSONExtractString(value, 'metadata') AS metadata
 FROM staging_transaction_events;
-*/

@@ -53,7 +53,7 @@ def get_clickhouse_client():
         exit(1)
 
 def parse_and_insert_batch(consumer, client, batch):
-    
+    print("Parse and insert function")
     rows_to_insert = []
     
     column_names = [
@@ -65,8 +65,7 @@ def parse_and_insert_batch(consumer, client, batch):
         try:
             data = message.value 
             
-            event_time_dt = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(data['event_time']))
-            #event_time_dt = datetime.fromtimestamp(data['event_time'], tz=timezone.utc)
+            event_time_dt = datetime.datetime.fromtimestamp(data['event_time'], tz=datetime.timezone.utc)
             row = (
                 data['event_id'],
                 data['user_id'],
@@ -109,16 +108,18 @@ def start_consuming(consumer, client):
             for topic_partition, raw_messages in messages.items():
                 message_batch.extend(raw_messages)
 
-            # Provera da li je batch pun ili je prošlo vreme za commit
             time_elapsed = time.time() - last_commit_time
-            
-            if message_batch and (len(message_batch) >= BATCH_SIZE or time_elapsed >= COMMIT_INTERVAL):                
+
+            # Provera da li je batch pun ili je prošlo vreme za commit
+            if message_batch and (len(message_batch) >= BATCH_SIZE or time_elapsed >= COMMIT_INTERVAL):   
+                print("Time elapsed-", time_elapsed, "Number of messages-", len(message_batch))
                 parse_and_insert_batch(consumer, client, message_batch)                
                 message_batch = []
                 last_commit_time = time.time()
                 
             elif not message_batch:
                 time.sleep(1)
+            
         
     except KeyboardInterrupt:
         print("\nZaustavljam Consumer...")

@@ -1,6 +1,6 @@
 # Dnevnik Rada 
 ## 🎯 Fokus Dana 
-Kreieanje Clickhouse tabela i uspostavljanje Python Consumer servisa za batch unos podataka u ClickHouse.
+Kreiranje Clickhouse tabela i uspostavljanje Python Consumer servisa za batch unos podataka u ClickHouse.
 
 
 ## 🛠 Izvršeni Zadaci
