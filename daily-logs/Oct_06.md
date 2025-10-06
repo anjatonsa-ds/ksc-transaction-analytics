@@ -54,7 +54,7 @@ Poslata je sledeća poruka sa negativnim iznosom.
 Sistem je izvršio proveru i označio transakciju kao nevažeću jer je u pitanju transakcija tipa *win*. 
 ![Negative amount check](assets/oct06_neg_amount_check2.png)
 
-Poruka sa negativnom vrednošću *amount* koja je tipa *bet* je takodjetransakcija koja se označava kao nevažeća.
+Poruka sa negativnom vrednošću *amount* koja je tipa *bet* je takodje transakcija koja se označava kao nevažeća.
 
 #### Testiranje idempotentnosti inserta
 Sledeća poruka je poslata 3 puta kako bi se simuliralo slanje transakcije sa istim *event_id*-om. 
