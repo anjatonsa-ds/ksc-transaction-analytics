@@ -44,6 +44,9 @@ U *transaction_events* tabelu dodata je kolona koja označava da li je transakci
 Sistem je izvršio proveru i označio transakciju kao važeću jer je u pitanju transakcija tipa *deposit*.
 ![Negative amount check](assets/oct06_neg_amount_check.png)
 
+Poruka sa negativnom vrednošću *amount* koja je tipa *withdraw* je takodje transakcija koja se označava kao važeća.
+
+
 Poslata je sledeća poruka sa negativnim iznosom.
 ```json
 {"event_id": "evt_ap0b1c2d3-e4f5-6789-abcd-ef0123456789", "user_id": "b0c1d2e3-f4a5-6789-0123-456789abcdef", "session_id": "sess_1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6", "product": "casino", "tx_type": "win", "currency": "ABC", "amount": -1000, "event_time": 1759735336, "metadata": "Negative amount test"}
@@ -51,7 +54,8 @@ Poslata je sledeća poruka sa negativnim iznosom.
 Sistem je izvršio proveru i označio transakciju kao nevažeću jer je u pitanju transakcija tipa *win*. 
 ![Negative amount check](assets/oct06_neg_amount_check2.png)
 
-Poruka sa negativnom vrednošću *amount* koja je tipa *deposit* je takodje transakcija koja se označava kao nevažeća.
+Poruka sa negativnom vrednošću *amount* koja je tipa *bet* je takodjetransakcija koja se označava kao nevažeća.
+
 
 
 #### Testiranje idempotentnosti inserta

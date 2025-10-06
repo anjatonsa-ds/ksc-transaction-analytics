@@ -71,7 +71,7 @@ def validate_and_transform_row(data):
         data['currency'] = 'RSD'
 
     #provera negativnih iznosa
-    if data['amount'] < 0 and not data['tx_type']=='deposit':
+    if data['amount'] < 0 and not (data['tx_type']=='deposit' or data['tx_type']=='withdraw'):
         data['is_valid'] = False
 
     #timestamp konverzija
