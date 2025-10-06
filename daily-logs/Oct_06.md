@@ -32,6 +32,9 @@ Poslata je sledeća poruka sa nevažećom valutom.
 Sistem je izvršio proveru i valuta je zamenjena default vrednošću ('RSD').
 ![Currency check](assets/oct06_currency_check.png)
 
+#### Provera integriteta ključeva
+Posalata su poruke sa nedostajućim vrednostima *event_id* i *user_id*. Provera je prošla i nije dozvoljen upis u bazu.
+![Missing id check](assets/oct06_missing_id_check.png)
 
 #### Provera transakcija sa negativnim iznosom
 U *transaction_events* tabelu dodata je kolona koja označava da li je transakcija važeća ili ne. Poslata je sledeća poruka sa negativnim iznosom.
@@ -39,14 +42,14 @@ U *transaction_events* tabelu dodata je kolona koja označava da li je transakci
 {"event_id": "evt_C0b1c2d3-e4f5-6789-abcd-ef0123456789", "user_id": "b0c1d2e3-f4a5-6789-0123-456789abcdef", "session_id": "sess_1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6", "product": "casino", "tx_type": "deposit", "currency": "ABC", "amount": -1000, "event_time": 1759735336, "metadata": "Negative amount test"}
 ```
 Sistem je izvršio proveru i označio transakciju kao važeću jer je u pitanju transakcija tipa *deposit*.
-![Currency check](assets/oct06_neg_amount_check.png)
+![Negative amount check](assets/oct06_neg_amount_check.png)
 
 Poslata je sledeća poruka sa negativnim iznosom.
 ```json
 {"event_id": "evt_ap0b1c2d3-e4f5-6789-abcd-ef0123456789", "user_id": "b0c1d2e3-f4a5-6789-0123-456789abcdef", "session_id": "sess_1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6", "product": "casino", "tx_type": "win", "currency": "ABC", "amount": -1000, "event_time": 1759735336, "metadata": "Negative amount test"}
 ```
 Sistem je izvršio proveru i označio transakciju kao nevažeću jer je u pitanju transakcija tipa *win*. 
-![Currency check](assets/oct06_neg_amount_check2.png)
+![Negative amount check](assets/oct06_neg_amount_check2.png)
 
 Poruka sa negativnom vrednošću *amount* koja je tipa *deposit* je takodje transakcija koja se označava kao nevažeća.
 
@@ -57,9 +60,9 @@ Sledeća poruka je poslata 3 puta kako bi se simuliralo slanje transakcije sa is
 {"event_id": "evt_C0b1c2d3-e4f5-6789-abcd-ef0123456789", "user_id": "b0c1d2e3-f4a5-6789-0123-456789abcdef", "session_id": "sess_1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6", "product": "casino", "tx_type": "deposit", "currency": "USD", "amount": 1000, "event_time": 1759735336, "metadata": "Same event_id test"}
 ```
 Na osnovu sledećeg upita može se videti da je u tabeli transakcija zabeležena 3 puta.
-![Currency check](assets/oct06_idempotency_check.png)
+![Same id check](assets/oct06_idempotency_check.png)
 
 Nakon korišćenja upita sa ključnom reći FINAL u tabeli se nalazi samo jedan red zbog prinuđenog merge-a nakon čega je izvršena deduplikacija koja je definisana izborom ReplacingMergeTree engine-a.
-![Currency check](assets/oct06_idempotnecy_final.png)
+![Same id FINAL check](assets/oct06_idempotnecy_final.png)
 
 

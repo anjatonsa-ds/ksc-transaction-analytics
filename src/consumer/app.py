@@ -60,6 +60,10 @@ def is_iso4217_currency_code(code):
         return False
     
 def validate_and_transform_row(data):
+    if not data['event_id'] or not data['user_id']:
+        print("WARNING: Nedostajući ID.")
+        return None
+    
     data['is_valid'] = True
 
     #validacija valuta
