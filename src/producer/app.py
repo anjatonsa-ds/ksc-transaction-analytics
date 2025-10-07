@@ -31,7 +31,7 @@ except Exception as e:
 
 
 def generate_event_data():
-    return {
+    data = {
         "event_id": f"evt_{uuid.uuid4()}",
         "user_id": f"{uuid.uuid4()}", 
         "session_id": f"sess_{uuid.uuid4()}",
@@ -42,14 +42,33 @@ def generate_event_data():
         "event_time": time.time(),
         "metadata": "some metadata"
     }
+    if data["tx_type"]=='deposit' or data['tx_type']=='withdraw':
+        data['amount'] = - data['amount']
+    return data
 
+def generate_bad_data():
+    return {
+        "event_id": random.choice(["",f"evt_{uuid.uuid4()}"]),
+        "user_id": random.choice(["",f"{uuid.uuid4()}"]), 
+        "session_id": random.choice(["",f"sess_{uuid.uuid4()}"]),
+        "product": random.choice(['sportsbook', 'casino', 'virtual', "", "xxx", "abcde"]),
+        "tx_type": random.choice(['bet', 'win', 'deposit', 'withdraw', 'invalid']), 
+        "currency": random.choice([fake.currency_code(), 'BAD', 'XXX', 'RSD-INVALID']),
+        "amount": random.randint(-5000, 5000), 
+        "event_time": random.choice([time.time() * 1000, time.time()]),
+        "metadata": "data quality test case"
+    }
 
 def start_streaming():
-    print(f"INFO: Pokrećem striming transakcionih događaja na temu '{KAFKA_TOPIC}'...")
+    print(f"INFO: Pokrećem streaming transakcionih događaja na temu '{KAFKA_TOPIC}'...")
 
     try:
         while True: 
-            event_data = generate_event_data()
+
+            if random.random() < 0.20:
+                event_data = generate_bad_data()
+            else:
+                event_data = generate_event_data()
             
             if event_data:
                 key = str(event_data['user_id']).encode('utf-8')
@@ -64,10 +83,8 @@ def start_streaming():
 
             producer.flush()
 
-            time.sleep(random.uniform(0.1, 0.5))
+            time.sleep(3)
 
-    except KeyboardInterrupt:
-        print("\nINFO: Striming zaustavljen od strane korisnika.")
     except Exception as e:
         print(f"ERROR: Neočekivana greška tokom striminga: {e}")
     finally:

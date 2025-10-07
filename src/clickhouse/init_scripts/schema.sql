@@ -21,7 +21,6 @@ CREATE TABLE IF NOT EXISTS transaction_events (
     amount      Int32,
     event_time  DateTime64(3),  
     metadata    String,
-    is_valid    Bool DEFAULT true
 )
 ENGINE = ReplacingMergeTree() 
 ORDER BY (event_id, event_time);
@@ -41,3 +40,19 @@ AS SELECT
     JSONExtractString(value, 'metadata') AS metadata
 FROM staging_transaction_events;
 */
+
+--Tabela odbijenih transackcija
+CREATE TABLE IF NOT EXISTS rejected_events (
+    rejection_reason String,
+    event_id    String,    
+    user_id     String,   
+    session_id  String,  
+    product     LowCardinality(String),
+    tx_type     LowCardinality(String),
+    currency    LowCardinality(String),
+    amount      Int32,
+    event_time  Nullable(DateTime64(3)),  
+    metadata    String
+)
+ENGINE = MergeTree() 
+ORDER BY (event_id, user_id);
