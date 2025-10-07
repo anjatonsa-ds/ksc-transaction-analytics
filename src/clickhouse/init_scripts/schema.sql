@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS transaction_events (
     amount      Int32,
     event_time  DateTime64(3),  
     metadata    String,
+    ingestion_time DateTime64(3)
 )
 ENGINE = ReplacingMergeTree() 
 ORDER BY (event_id, event_time);

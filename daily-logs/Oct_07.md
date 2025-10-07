@@ -49,7 +49,18 @@ SELECT
 ```
 ![Procenat odbijenih poruka](assets/oct_07_perc_rejected.png)
 
+Upit koji odredjuje lag_time za transakcije.
+```sql
+SELECT event_id, ingestion_time-event_time AS lag_time 
+FROM transaction_events
+```
 
+Upit koji računa prosečno i maksimalno kašnjenje.
+```sql 
+SELECT avg(ingestion_time-event_time) AS avg_lag_time, 
+       max(ingestion_time-event_time) AS max_lag_time
+FROM transaction_events
+```
 
 
 

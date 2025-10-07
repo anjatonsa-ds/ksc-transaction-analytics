@@ -141,7 +141,8 @@ def validate_and_transform_row(data, client):
             data['currency'],
             data['amount'],
             event_time_dt,
-            data['metadata']
+            data['metadata'],
+            datetime.datetime.now()            
         )
         return row
 
@@ -149,7 +150,7 @@ def validate_and_transform_row(data, client):
 
 def parse_and_insert_batch(consumer, client, batch):
     rows_to_insert = []    
-    column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata']
+    column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata','ingestion_time']
     
     for message in batch:
         try:
