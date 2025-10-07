@@ -83,7 +83,7 @@ def start_streaming():
 
             producer.flush()
 
-            time.sleep(3)
+            time.sleep(0.1)
 
     except Exception as e:
         print(f"ERROR: Neočekivana greška tokom striminga: {e}")

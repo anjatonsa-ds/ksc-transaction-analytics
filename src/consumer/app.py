@@ -14,7 +14,7 @@ CH_PASSWORD = os.environ.get('CH_PASSWORD')
 CH_DB = os.environ.get('CH_DB', 'default')
 
 BATCH_SIZE = 500
-COMMIT_INTERVAL = 5 
+COMMIT_INTERVAL = 0.1 
 
 if not all([KAFKA_BROKER_URL, CH_HOST, CH_USER, CH_PASSWORD]):
     print("FATAL: Nedostaju parametri za povezivanje sa Kafka/ClickHouse.")
@@ -197,7 +197,7 @@ def start_consuming(consumer, client):
                 last_commit_time = time.time()
                 
             elif not message_batch:
-                time.sleep(1)
+                time.sleep(0.1)
 
     except Exception as e:
         print(f"ERROR: {e}")

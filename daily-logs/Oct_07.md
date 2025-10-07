@@ -61,7 +61,7 @@ SELECT avg(ingestion_time-event_time) AS avg_lag_time,
        max(ingestion_time-event_time) AS max_lag_time
 FROM transaction_events
 ```
-
-
-
+### 4. Testiranje lag_time-a u odnosu na latenciju podataka
+Merenje i provera makismalnog i srednjeg kašnjenja upisa transakcije prilikom porasta saobraćaja. Smanjeno je vreme pauze izmedju intervala slanja kod producer-a povećavajući troughput i smanjen je COMMIT_INTERVAL koje consumer-a.
+Zapažanje: kada je broj poruka u prethodnom minutu oko 250, maksimalni lag_time je okvirno 0.7s, dok je average 0.06s. 
 
