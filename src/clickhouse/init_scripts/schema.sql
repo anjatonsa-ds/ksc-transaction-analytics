@@ -44,7 +44,7 @@ FROM staging_transaction_events;
 */
 
 --Tabela odbijenih transakcija
-SET allow_experimental_full_text_index = true;
+SET allow_experimental_full_text_index = 1;
 CREATE TABLE IF NOT EXISTS rejected_events (
     rejection_reason String,
     rej_reasons Array(String),
