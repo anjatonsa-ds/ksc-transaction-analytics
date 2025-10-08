@@ -63,7 +63,7 @@ def is_iso4217_currency_code(code):
         return False
     
 def insert_rejected(row, client):
-    column_names = [ 'rejection_reason','event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata']
+    column_names = [ 'rejection_reason','rej_reasons','event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata']
     try:
         client.execute(
             f'INSERT INTO rejected_events ({", ".join(column_names)}) VALUES',
@@ -77,48 +77,58 @@ def insert_rejected(row, client):
 def validate_and_transform_row(data, client):
     to_reject = False
     rejection_reason = ""
+    rej_reasons=[]
 
     if not data['event_id']:
         print("WARNING: Nedostaje event_id.")
-        rejection_reason+=" Misssing event_id."
+        rejection_reason+="Misssing event_id.\n"
+        rej_reasons.append("Misssing event_id.")
         to_reject=True
     
     if not data['user_id']:
         print("WARNING: Nedostaje user_id.")
-        rejection_reason+=" Misssing user_id."
+        rejection_reason+="Misssing user_id.\n"
+        rej_reasons.append("Misssing user_id.")
         to_reject=True
 
     #validacija valuta
     if not is_iso4217_currency_code(data['currency']):
         print("WARNING: Currency vrednost nije validna.")
-        rejection_reason+=" Currency value not valid."
+        rejection_reason+="Currency value not valid.\n"
+        rej_reasons.append("Currency value not valid.")
         to_reject=True
 
     #provera tipa transakcije
     if not data['tx_type'] in ['bet', 'win', 'deposit', 'withdraw']:
         print("WARNING: Tip transakcije nije validan.")
-        rejection_reason+=" Transaction type is not valid."
+        rejection_reason+="Transaction type is not valid.\n"
+        rej_reasons.append("Transaction type is not valid.")
         to_reject=True
 
     #provera negativnih iznosa
     if data['amount'] < 0 and not (data['tx_type']=='deposit' or data['tx_type']=='withdraw'):
         print("WARNING: Amount<0 za nevalidan tip transakcije.")
-        rejection_reason+=" Amount<0 for invalid type of transaction."
+        rejection_reason+="Amount<0 for invalid type of transaction.\n"
+        rej_reasons.append("Amount<0 for invalid type of transaction.")
         to_reject=True
 
     #timestamp konverzija
     if data['event_time'] > time.time():
         print("WARNING: Timestamp transakcije je u buducnosti.")
-        rejection_reason+=" Timestamp is in the future."
+        rejection_reason+="Timestamp is in the future.\n"
+        rej_reasons.append("Timestamp is in the future.")
         to_reject=True
         event_time_dt=None
     else:    
         event_time_dt = datetime.datetime.fromtimestamp(data['event_time'], tz=datetime.timezone.utc)
 
+    if rejection_reason[-1]=="\n":
+        rejection_reason = rejection_reason[:-1]
 
     if to_reject:
         row = (
             rejection_reason,
+            rej_reasons,
             data['event_id'],
             data['user_id'],
             data['session_id'],

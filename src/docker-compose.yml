@@ -38,15 +38,15 @@ services:
     environment:
       CLICKHOUSE_USER: ch_user
       CLICKHOUSE_PASSWORD: ch_password
+      CLICKHOUSE_SERVER_CONFIGS_ALLOW_EXPERIMENTAL_FULL_TEXT_INDEX: 1
     ulimits:
       nofile:
         soft: 262144
         hard: 262144
     volumes:
       - ./clickhouse/init_scripts/:/docker-entrypoint-initdb.d/
-      #- ./clickhouse/config.xml:/etc/clickhouse-server/config.xml
-      #- ./clickhouse/users.xml:/etc/clickhouse-server/users.xml
-      - clickhouse_data:/var/lib/clickhouse # Persistent data volume
+      - ./clickhouse/custom_settings.xml:/etc/clickhouse-server/config.d/custom_settings.xml
+      - clickhouse_data:/var/lib/clickhouse 
 
   superset:
     image: apache/superset:3.1.0 
@@ -92,6 +92,7 @@ services:
       CH_HOST: clickhouse
       CH_USER: ch_user
       CH_PASSWORD: ch_password
+      
 
 volumes:
   clickhouse_data:

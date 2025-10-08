@@ -43,9 +43,11 @@ AS SELECT
 FROM staging_transaction_events;
 */
 
---Tabela odbijenih transackcija
+--Tabela odbijenih transakcija
+SET allow_experimental_full_text_index = true;
 CREATE TABLE IF NOT EXISTS rejected_events (
     rejection_reason String,
+    rej_reasons Array(String),
     event_id    String,    
     user_id     String,   
     session_id  String,  
@@ -54,7 +56,8 @@ CREATE TABLE IF NOT EXISTS rejected_events (
     currency    LowCardinality(String),
     amount      Int32,
     event_time  Nullable(DateTime64(3)),  
-    metadata    String
+    metadata    String,
+    INDEX rej_res_tokenized(rejection_reason) TYPE text(tokenizer = 'split', separators = ['\n'])
 )
 ENGINE = MergeTree() 
 ORDER BY (event_id, user_id);
