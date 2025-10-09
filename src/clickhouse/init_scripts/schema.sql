@@ -61,3 +61,67 @@ CREATE TABLE IF NOT EXISTS rejected_events (
 )
 ENGINE = MergeTree() 
 ORDER BY (event_id, user_id);
+
+--Za DQ report dnevne metrike
+CREATE TABLE IF NOT EXISTS daily_metrics (
+    report_date Date,
+    total_messages UInt64,
+    valid_messages UInt64,
+    rejected_messages UInt64,
+    average_lag_seconds Float32
+)
+ENGINE = SummingMergeTree()
+ORDER BY (report_date);
+
+-- MV za validne transakcije
+CREATE MATERIALIZED VIEW valid_metrics_mv TO daily_metrics AS
+SELECT
+    toDate(event_time) AS report_date,
+    count() AS valid_messages,
+    0 AS rejected_messages,
+    count() AS total_messages,
+    avg(ingestion_lag_seconds) AS average_lag_seconds
+FROM transactions
+GROUP BY report_date;
+
+-- MV za odbijene transakcije
+CREATE MATERIALIZED VIEW rejected_metrics_mv TO daily_metrics AS
+SELECT
+    toDate(event_time) AS report_date,
+    0 AS valid_messages, 
+    count() AS rejected_messages,
+    count() AS total_messages,
+    0 AS average_lag_seconds
+FROM rejected_events
+GROUP BY report_date;
+
+--Za DQ report dnevne metrike
+CREATE TABLE IF NOT EXISTS hourly_metrics (
+    report_hour DateTime,
+    total_messages UInt64,
+    valid_messages UInt64,
+    rejected_messages UInt64,
+    average_lag_seconds Float32 
+)
+ENGINE = SummingMergeTree()
+ORDER BY (report_hour);
+
+CREATE MATERIALIZED VIEW valid_hourly_mv TO hourly_metrics AS
+SELECT
+    toStartOfHour(event_time) AS report_hour,
+    count() AS valid_messages,
+    0 AS rejected_messages,
+    count() AS total_messages,
+    avg(ingestion_time - event_time) AS average_lag_seconds
+FROM transaction_events
+GROUP BY report_hour;
+
+CREATE MATERIALIZED VIEW rejected_hourly_mv TO hourly_metrics AS
+SELECT
+    toStartOfHour(event_time) AS report_hour,
+    0 AS valid_messages,
+    count() AS rejected_messages,
+    count() AS total_messages,
+    toFloat32(0.0) AS average_lag_seconds
+FROM rejected_events
+GROUP BY report_hour;

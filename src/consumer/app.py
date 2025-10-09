@@ -54,7 +54,7 @@ def get_clickhouse_client():
 
 def is_iso4217_currency_code(code):
     
-    if code == 'XXX':  #ISO 4217 validan ali nekoristna za transakcionu analizu
+    if code == 'XXX':  #ISO 4217 validan ali nekoristan za transakcionu analizu
         return False
     try:
         Currency(code)
@@ -121,9 +121,6 @@ def validate_and_transform_row(data, client):
         event_time_dt=None
     else:    
         event_time_dt = datetime.datetime.fromtimestamp(data['event_time'], tz=datetime.timezone.utc)
-
-    if rejection_reason[-1]=="\n":
-        rejection_reason = rejection_reason[:-1]
 
     if to_reject:
         row = (
