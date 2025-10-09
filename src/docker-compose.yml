@@ -49,7 +49,7 @@ services:
       - clickhouse_data:/var/lib/clickhouse 
 
   superset:
-    image: apache/superset:3.1.0 
+    image: apache/superset:3.1.0
     container_name: superset
     restart: always
     depends_on:
@@ -59,11 +59,9 @@ services:
     user: root
     environment:
       SUPERSET_SECRET_KEY: 'YOUR_VERY_LONG_SECRET_KEY_HERE'
-      SUPERSET_DATABASE_URI: "clickhouse://default:password@clickhouse:8123/default"
+      SUPERSET_DATABASE_URI: "clickhousedb://ch_user:ch_password@clickhouse:9000/default"
     volumes:
-      # Mount the volume to keep the Superset data persistent
       - superset_home:/app/superset_home
-    #command: ["/app/docker/docker-init.sh"] # Standard initialization script
 
   producer:
     build:

@@ -9,3 +9,6 @@ docker compose up
 
 ## ClickHouse Web SQL UI
 http://localhost:8123
+
+## Apache Superset Web  UI
+http://localhost:8088

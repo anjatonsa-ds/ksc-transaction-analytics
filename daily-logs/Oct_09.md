@@ -126,3 +126,22 @@ FROM hourly_metrics
 FINAL
 ORDER BY report_hour DESC;
 ```
+### 3. Povezivanje Superset-a sa ClickHouse-om
+
+Potrebno je instalirati clickhouse-connect biblioteku.
+```bash
+docker exec -it superset bash
+pip install clickhouse-connect
+```
+Kredencijali za konektovanje na SuperSet UI-u su admin, admin. Prilikom konekcije potrebno je dodati SQLAlchemy uri("clickhousedb://ch_user:ch_password@clickhouse:9000/default").
+
+Napravljeni su sledeći grafikoni.
+Broj dogadjaja kroz vreme.
+![Broj dogadjaja kroz vreme](assets/oct_09_br_po_min.jpg)
+
+Distribucija amount vrednosti.
+![Distribucija amount vrednosti](assets/oct_09_distribucija_amount.jpg)
+
+
+Pregled transakcija po tipu transakcije.
+![Pregled transakcija po tipu transakcije](assets/oct_09_po_tipu_transakcije.jpg)

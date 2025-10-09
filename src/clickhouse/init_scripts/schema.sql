@@ -81,7 +81,7 @@ SELECT
     0 AS rejected_messages,
     count() AS total_messages,
     avg(ingestion_lag_seconds) AS average_lag_seconds
-FROM transactions
+FROM transaction_events
 GROUP BY report_date;
 
 -- MV za odbijene transakcije
