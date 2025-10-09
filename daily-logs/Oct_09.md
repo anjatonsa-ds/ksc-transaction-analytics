@@ -71,7 +71,7 @@ Upit koji koristi Array(String) se izvršava duplo brže.
 
 
 
-### 3. DQ report
+### 2. DQ report
 Kreiranje upita koji prikazuje broj ukupnih poruka, broj validnih, broj odbijenih, procenat odbijenih i prosečan ingest lag u poslednjih 24h.
 Za potrebe efikasnog izveštavanja na dnevnom nivou, izabran je engine SummingMergeTree kojim se omogućava automatsko sabiranje svih brojača (poruke, lag) koje se unose za isti dan (report_date). Time se drastično smanjuje prostor na disku i ubrzava analiza. Izbor ključa za sortiranje (ORDER BY (report_date)) je odluka kako bi se da se svaki kalendarski dan tretirao kao jedinstvena grupa za sabiranje. Ovo osigurava da se svi mali batch unosi spoje u jedan red sa konačnim zbirom poruka i prosekom lag-a.
 
@@ -112,8 +112,10 @@ SELECT
 FROM daily_metrics
 FINAL
 ORDER BY report_date DESC;
+```
 
 Upit koji služi ta dobijanje metrika po satima.
+```sql
 SELECT
     report_hour,
     total_messages,
@@ -123,3 +125,4 @@ SELECT
 FROM hourly_metrics
 FINAL
 ORDER BY report_hour DESC;
+```
