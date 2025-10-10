@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS transaction_events (
     product     LowCardinality(String),
     tx_type     LowCardinality(String),
     currency    LowCardinality(String),
-    amount      Int32,
+    amount      Float32,
     event_time  DateTime64(3),  
     metadata    String,
     ingestion_time DateTime64(3),
@@ -37,7 +37,7 @@ AS SELECT
     JSONExtractString(value, 'product') AS product,
     JSONExtractString(value, 'tx_type') AS tx_type,
     JSONExtractString(value, 'currency') AS currency,
-    JSONExtractInt(value, 'amount') AS amount,
+    JSONExtractFloat32(value, 'amount') AS amount,
     toDateTime64(JSONExtractFloat(value, 'event_time'), 3) AS event_time, 
     JSONExtractString(value, 'metadata') AS metadata
 FROM staging_transaction_events;
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS rejected_events (
     product     LowCardinality(String),
     tx_type     LowCardinality(String),
     currency    LowCardinality(String),
-    amount      Int32,
+    amount      Float32,
     event_time  Nullable(DateTime64(3)),  
     metadata    String,
     INDEX rej_res_tokenized(rejection_reason) TYPE text(tokenizer = 'split', separators = ['\n'])

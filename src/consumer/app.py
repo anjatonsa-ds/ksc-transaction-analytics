@@ -81,41 +81,41 @@ def validate_and_transform_row(data, client):
 
     if not data['event_id']:
         print("WARNING: Nedostaje event_id.")
-        rejection_reason+="Misssing event_id.\n"
-        rej_reasons.append("Misssing event_id.")
+        rejection_reason+="miss_evnt_id "
+        rej_reasons.append("Missing event_id.")
         to_reject=True
     
     if not data['user_id']:
         print("WARNING: Nedostaje user_id.")
-        rejection_reason+="Misssing user_id.\n"
-        rej_reasons.append("Misssing user_id.")
+        rejection_reason+="miss_usr_id "
+        rej_reasons.append("Missing user_id.")
         to_reject=True
 
     #validacija valuta
     if not is_iso4217_currency_code(data['currency']):
         print("WARNING: Currency vrednost nije validna.")
-        rejection_reason+="Currency value not valid.\n"
+        rejection_reason+="curr_not_valid "
         rej_reasons.append("Currency value not valid.")
         to_reject=True
 
     #provera tipa transakcije
     if not data['tx_type'] in ['bet', 'win', 'deposit', 'withdraw']:
         print("WARNING: Tip transakcije nije validan.")
-        rejection_reason+="Transaction type is not valid.\n"
+        rejection_reason+="tx_type_not_valid "
         rej_reasons.append("Transaction type is not valid.")
         to_reject=True
 
     #provera negativnih iznosa
     if data['amount'] < 0 and not (data['tx_type']=='deposit' or data['tx_type']=='withdraw'):
         print("WARNING: Amount<0 za nevalidan tip transakcije.")
-        rejection_reason+="Amount<0 for invalid type of transaction.\n"
+        rejection_reason+="amnt_not_valid "
         rej_reasons.append("Amount<0 for invalid type of transaction.")
         to_reject=True
 
     #timestamp konverzija
     if data['event_time'] > time.time():
         print("WARNING: Timestamp transakcije je u buducnosti.")
-        rejection_reason+="Timestamp is in the future.\n"
+        rejection_reason+="ts_not_valid"
         rej_reasons.append("Timestamp is in the future.")
         to_reject=True
         event_time_dt=None

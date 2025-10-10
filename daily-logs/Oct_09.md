@@ -133,7 +133,15 @@ Potrebno je instalirati clickhouse-connect biblioteku.
 docker exec -it superset bash
 pip install clickhouse-connect
 ```
-Kredencijali za konektovanje na SuperSet UI-u su admin, admin. Prilikom konekcije potrebno je dodati SQLAlchemy uri("clickhousedb://ch_user:ch_password@clickhouse:9000/default").
+
+Dodati kredencijali za konektovanje na SuperSet UI.
+```bash
+docker exec -it superset bash
+superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@example.com --password admin
+superset db upgrade
+superset init
+```
+Prilikom konekcije potrebno je dodati SQLAlchemy uri("clickhousedb://ch_user:ch_password@clickhouse:9000/default").
 
 Napravljeni su sledeći grafikoni.
 Broj dogadjaja kroz vreme.
