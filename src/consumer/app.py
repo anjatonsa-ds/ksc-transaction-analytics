@@ -90,6 +90,12 @@ def validate_and_transform_row(data, client):
         rejection_reason+="miss_usr_id "
         rej_reasons.append("Missing user_id.")
         to_reject=True
+    
+    if not data['session_id']:
+        print("WARNING: Nedostaje session_id.")
+        rejection_reason+="miss_ses_id "
+        rej_reasons.append("Missing session_id.")
+        to_reject=True
 
     #validacija valuta
     if not is_iso4217_currency_code(data['currency']):
@@ -103,6 +109,13 @@ def validate_and_transform_row(data, client):
         print("WARNING: Tip transakcije nije validan.")
         rejection_reason+="tx_type_not_valid "
         rej_reasons.append("Transaction type is not valid.")
+        to_reject=True
+    
+    #provera tipa product
+    if not data['product'] in ['sportsbook', 'casino', 'virtual']:
+        print("WARNING: Tip producta nije validan.")
+        rejection_reason+='product_not_valid '
+        rej_reasons.append("Product type is not valid.")
         to_reject=True
 
     #provera negativnih iznosa
@@ -149,7 +162,6 @@ def validate_and_transform_row(data, client):
             data['amount'],
             event_time_dt,
             data['metadata'],
-            datetime.datetime.now()            
         )
         return row
 
@@ -157,7 +169,7 @@ def validate_and_transform_row(data, client):
 
 def parse_and_insert_batch(consumer, client, batch):
     rows_to_insert = []    
-    column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata','ingestion_time']
+    column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata']
     
     for message in batch:
         try:
@@ -170,16 +182,25 @@ def parse_and_insert_batch(consumer, client, batch):
             print(f"ERROR: Greška pri parsiranju poruke: {e}. Poruka: {message.value}")
             
     if rows_to_insert:
-        try:
-            client.execute(
-                f'INSERT INTO transaction_events ({", ".join(column_names)}) VALUES',
-                rows_to_insert
-            )
-            print(f"INFO:Uspešno upisano {len(rows_to_insert)} redova u ClickHouse tabelu *transaction_events*.")
-            
-        except Exception as e:
-            print(f"ERROR:Greška pri batch upisu u ClickHouse tabelu *transaction_events*: {e}")
-    
+        MAX_RETRIES = 3
+        PAUSE_SECONDS = 5
+
+        for attempt in range(MAX_RETRIES):
+            try:
+                client.execute(
+                    f'INSERT INTO transaction_events ({", ".join(column_names)}) VALUES',
+                    rows_to_insert
+                )
+                print(f"INFO: Uspešno upisano {len(rows_to_insert)} redova u ClickHouse nakon {attempt + 1}. pokušaja.")
+                break 
+                
+            except Exception as e:
+                print(f"WARNING: Neuspeli batch upis u ClickHouse (Pokušaj {attempt + 1}/{MAX_RETRIES}): {e}")
+                if attempt == MAX_RETRIES - 1:
+                    print(f"FATAL: Svi pokušaji upisa ({MAX_RETRIES}) su propali. Odbacivanje batcha zbog perzistentne greške.")
+                else:
+                    print(f"INFO: Pauziranje na {PAUSE_SECONDS} sekundi pre sledećeg pokušaja...")
+                    time.sleep(PAUSE_SECONDS)
     consumer.commit()
 
 def start_consuming(consumer, client):

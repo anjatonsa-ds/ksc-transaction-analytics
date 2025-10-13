@@ -76,12 +76,15 @@ def generate_event_data(session_id, user_data, event_timestamp):
 
 def generate_good_data(user_id, session_id, amount, event_timestamp):
     
+    tx_options = ['bet', 'win', 'deposit', 'withdraw']
+    tx_weights = [50, 5, 25, 20]
+    selected_tx_type = random.choices(tx_options, weights=tx_weights, k=1)[0]
     data = {
         "event_id": f"evt_{uuid.uuid4()}",
         "user_id": user_id,
         "session_id": session_id,
         "product": random.choice(['sportsbook', 'casino', 'virtual']),
-        "tx_type": random.choice(['bet', 'win', 'deposit', 'withdraw']), 
+        "tx_type": selected_tx_type, 
         "currency": fake.currency_code(),
         "amount": amount,
         "event_time": event_timestamp,
@@ -111,7 +114,6 @@ def start_streaming():
 
     try:
         while True: 
-
             #kreiranje random sesije
             session_id=f"sess_{uuid.uuid4()}"
             user_data = choose_user()

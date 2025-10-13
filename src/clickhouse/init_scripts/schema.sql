@@ -21,8 +21,7 @@ CREATE TABLE IF NOT EXISTS transaction_events (
     amount      Float32,
     event_time  DateTime64(3),  
     metadata    String,
-    ingestion_time DateTime64(3),
-    insertTimeByCH DateTime64(3) DEFAULT now()
+    ingestion_time DateTime64(3) DEFAULT now()
 )
 ENGINE = ReplacingMergeTree() 
 ORDER BY (event_id, event_time);
@@ -57,6 +56,7 @@ CREATE TABLE IF NOT EXISTS rejected_events (
     amount      Float32,
     event_time  Nullable(DateTime64(3)),  
     metadata    String,
+    ingestion_time DateTime64(3) DEFAULT now(),
     INDEX rej_res_tokenized(rejection_reason) TYPE text(tokenizer = 'split', separators = ['\n'])
 )
 ENGINE = MergeTree() 
@@ -73,28 +73,6 @@ CREATE TABLE IF NOT EXISTS daily_metrics (
 ENGINE = SummingMergeTree()
 ORDER BY (report_date);
 
--- MV za validne transakcije
-CREATE MATERIALIZED VIEW valid_metrics_mv TO daily_metrics AS
-SELECT
-    toDate(event_time) AS report_date,
-    count() AS valid_messages,
-    0 AS rejected_messages,
-    count() AS total_messages,
-    avg(ingestion_lag_seconds) AS average_lag_seconds
-FROM transaction_events
-GROUP BY report_date;
-
--- MV za odbijene transakcije
-CREATE MATERIALIZED VIEW rejected_metrics_mv TO daily_metrics AS
-SELECT
-    toDate(event_time) AS report_date,
-    0 AS valid_messages, 
-    count() AS rejected_messages,
-    count() AS total_messages,
-    0 AS average_lag_seconds
-FROM rejected_events
-GROUP BY report_date;
-
 --Za DQ report dnevne metrike
 CREATE TABLE IF NOT EXISTS hourly_metrics (
     report_hour DateTime,
@@ -105,6 +83,30 @@ CREATE TABLE IF NOT EXISTS hourly_metrics (
 )
 ENGINE = SummingMergeTree()
 ORDER BY (report_hour);
+
+-- MV za validne transakcije
+CREATE MATERIALIZED VIEW valid_metrics_mv TO daily_metrics AS
+SELECT
+    toDate(event_time) AS report_date,
+    count() AS valid_messages,
+    0 AS rejected_messages,
+    count() AS total_messages,
+    avg(ingestion_time - event_time) AS average_lag_seconds
+FROM transaction_events
+GROUP BY report_date;
+
+-- MV za odbijene transakcije
+CREATE MATERIALIZED VIEW rejected_metrics_mv TO daily_metrics AS
+SELECT
+    toDate(ingestion_time) AS report_date,
+    0 AS valid_messages, 
+    count() AS rejected_messages,
+    count() AS total_messages,
+    0 AS average_lag_seconds
+FROM rejected_events
+GROUP BY report_date;
+
+
 
 CREATE MATERIALIZED VIEW valid_hourly_mv TO hourly_metrics AS
 SELECT
@@ -118,7 +120,7 @@ GROUP BY report_hour;
 
 CREATE MATERIALIZED VIEW rejected_hourly_mv TO hourly_metrics AS
 SELECT
-    toStartOfHour(event_time) AS report_hour,
+    toStartOfHour(ingestion_time) AS report_hour,
     0 AS valid_messages,
     count() AS rejected_messages,
     count() AS total_messages,
