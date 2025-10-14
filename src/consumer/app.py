@@ -1,9 +1,11 @@
 import os
 import json
 import time, datetime
+from threading import Thread
 from kafka import KafkaConsumer
 from clickhouse_driver import Client
 from iso4217 import Currency
+from flask import Flask, jsonify 
 
 KAFKA_TOPIC = os.environ.get('KAFKA_TOPIC', 'transaction_events')
 KAFKA_BROKER_URL = os.environ.get('KAFKA_BROKER_URL')
@@ -13,8 +15,17 @@ CH_USER = os.environ.get('CH_USER')
 CH_PASSWORD = os.environ.get('CH_PASSWORD')
 CH_DB = os.environ.get('CH_DB', 'default')
 
-BATCH_SIZE = 500
-COMMIT_INTERVAL = 0.1 
+BATCH_SIZE = 10000
+COMMIT_INTERVAL = 0.01 
+
+GLOBAL_METRICS = {
+    'status': 'healthy',
+    'last_update': datetime.datetime.now(),
+    'total' :0,
+    'rejected_total': 0,
+    'last_batch_size': 0,
+    'last_insert_duration_s': 0.0,
+}
 
 if not all([KAFKA_BROKER_URL, CH_HOST, CH_USER, CH_PASSWORD]):
     print("FATAL: Nedostaju parametri za povezivanje sa Kafka/ClickHouse.")
@@ -78,6 +89,9 @@ def validate_and_transform_row(data, client):
     to_reject = False
     rejection_reason = ""
     rej_reasons=[]
+    current_time_s = time.time()
+    event_time_dt = None
+    ingestion_lag_seconds = None
 
     if not data['event_id']:
         print("WARNING: Nedostaje event_id.")
@@ -165,22 +179,42 @@ def validate_and_transform_row(data, client):
         )
         return row
 
-
+def insert_pipeline_metrics(client, metric_data):
+    column_names = ['batch_size','failed_insert_size', 'num_rejected']
+    try:
+        client.execute(
+            f"INSERT INTO pipeline_metrics ({', '.join(column_names)}) VALUES",
+            [metric_data]
+        )
+        print(f"INFO: Upisano u pipeline_metrics tabelu.")
+    except Exception as e:
+        print(f"ERROR: Neuspeli upis metrika u pipeline_metrics: {e}")
 
 def parse_and_insert_batch(consumer, client, batch):
+    print(f"INFO - Batch insert, size {len(batch)}")
     rows_to_insert = []    
     column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata']
-    
+    rejected_count = 0 
+
     for message in batch:
         try:
             data = message.value 
             row = validate_and_transform_row(data, client)
             if row:
                 rows_to_insert.append(row)  
+            else: 
+                rejected_count += 1
             
         except Exception as e:
             print(f"ERROR: Greška pri parsiranju poruke: {e}. Poruka: {message.value}")
-            
+    
+    GLOBAL_METRICS['total'] += len(batch)
+    GLOBAL_METRICS['rejected_total'] += rejected_count
+    GLOBAL_METRICS['last_batch_size'] = len(batch)
+    GLOBAL_METRICS['last_update'] = datetime.datetime.now()
+
+    insert_start_time = time.time()
+    failed_count = 0
     if rows_to_insert:
         MAX_RETRIES = 3
         PAUSE_SECONDS = 5
@@ -198,9 +232,23 @@ def parse_and_insert_batch(consumer, client, batch):
                 print(f"WARNING: Neuspeli batch upis u ClickHouse (Pokušaj {attempt + 1}/{MAX_RETRIES}): {e}")
                 if attempt == MAX_RETRIES - 1:
                     print(f"FATAL: Svi pokušaji upisa ({MAX_RETRIES}) su propali. Odbacivanje batcha zbog perzistentne greške.")
+                    failed_count = len(rows_to_insert)
                 else:
                     print(f"INFO: Pauziranje na {PAUSE_SECONDS} sekundi pre sledećeg pokušaja...")
                     time.sleep(PAUSE_SECONDS)
+    
+    insert_duration_s = time.time() - insert_start_time
+    GLOBAL_METRICS['last_insert_duration_s'] = insert_duration_s
+
+    print(f"INFO: Uspešno upisano {len(rows_to_insert)} redova u ClickHouse za {insert_duration_s}s.")
+    
+    metric_data = (
+        len(batch),
+        failed_count,
+        rejected_count
+    )
+    print(f"INFO: Neuspešno upisano {failed_count} redova u ClickHouse. Broj odbijenih poruka u batch-u {rejected_count}")
+    insert_pipeline_metrics(client, metric_data)
     consumer.commit()
 
 def start_consuming(consumer, client):
@@ -229,10 +277,21 @@ def start_consuming(consumer, client):
 
     except Exception as e:
         print(f"ERROR: {e}")
+        GLOBAL_METRICS['status'] = f'FATAL ERROR: {e}'
     finally:
         if consumer:
             consumer.close()
             print("INFO:Kafka Consumer zatvoren.")
+
+app = Flask(__name__)
+
+@app.route('/status', methods=['GET'])
+def status_endpoint():
+    GLOBAL_METRICS['last_update'] = datetime.datetime.now()
+    return jsonify(GLOBAL_METRICS)
+
+def run_flask_app():
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False) 
 
 if __name__ == '__main__':
     time.sleep(5) 
@@ -240,4 +299,7 @@ if __name__ == '__main__':
     kafka_consumer = get_kafka_consumer()
     clickhouse_client = get_clickhouse_client()
     time.sleep(5) 
+    flask_thread = Thread(target=run_flask_app)
+    flask_thread.daemon = True
+    flask_thread.start()
     start_consuming(kafka_consumer, clickhouse_client)

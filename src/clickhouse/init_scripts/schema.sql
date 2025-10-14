@@ -127,3 +127,13 @@ SELECT
     toFloat32(0.0) AS average_lag_seconds
 FROM rejected_events
 GROUP BY report_hour;
+
+--Pipeline metrics
+CREATE TABLE IF NOT EXISTS pipeline_metrics (
+    ingestion_time DateTime64(3) DEFAULT now(),
+    batch_size UInt64,
+    failed_insert_size UInt64,
+    num_rejected UInt64
+)
+ENGINE = MergeTree()
+ORDER BY (failed_insert_size );
