@@ -12,3 +12,6 @@ http://localhost:8123
 
 ## Apache Superset Web  UI
 http://localhost:8088
+
+## Consumer health check
+http://localhost:5000
