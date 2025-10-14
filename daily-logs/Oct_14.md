@@ -10,7 +10,7 @@ Dodate log poruke sa vremenom trajanja batch inserta i brojem redova u batch-u.
 ### 3. Monitoring pipeline metrike
 Kreiran je dashboard u Supersetu koji ima sledeće grafikone.
 
-![Pipeline metrics dashboard](assets/oct_14_pipelinemetrics)
+![Pipeline metrics dashboard](assets/oct_14_pipelinemetrics.jpg)
 
 
 ### 4. Health check endpoint
