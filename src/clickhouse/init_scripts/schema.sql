@@ -11,20 +11,7 @@ SETTINGS
     kafka_num_consumers = 1;
 
 -- Target tabela
-CREATE TABLE IF NOT EXISTS transaction_events (
-    event_id    String,    
-    user_id     String,   
-    session_id  String,  
-    product     LowCardinality(String),
-    tx_type     LowCardinality(String),
-    currency    LowCardinality(String),
-    amount      Float32,
-    event_time  DateTime64(3),  
-    metadata    String,
-    ingestion_time DateTime64(3) DEFAULT now()
-)
-ENGINE = ReplacingMergeTree() 
-ORDER BY (event_id, event_time);
+c
 
 -- Materialized View
 /*
@@ -137,3 +124,23 @@ CREATE TABLE IF NOT EXISTS pipeline_metrics (
 )
 ENGINE = MergeTree()
 ORDER BY (failed_insert_size );
+
+CREATE TABLE IF NOT EXISTS casino_transactions (
+    event_id    String,    
+    user_id     String,   
+    session_id  String,  
+    product     LowCardinality(String),
+    tx_type     LowCardinality(String),
+    currency    LowCardinality(String),
+    amount      Float32,
+    event_time  DateTime64(3),  
+    metadata    String,
+    ingestion_time DateTime64(3) DEFAULT now()
+)
+ENGINE = ReplacingMergeTree() 
+ORDER BY (event_id, event_time);
+
+SELECT
+    avg(JSONExtractFloat(raw_metadata_json, 'TotalBetAmount'))
+FROM
+    transaction_events;

@@ -74,6 +74,48 @@ def generate_event_data(session_id, user_data, event_timestamp):
         event_data = generate_good_data(user_id, session_id, amount, event_timestamp)
     return event_data
 
+
+def generate_metadata():
+    GAME_NAMES = ["TreasureHunt", "DeepSpace", "VikingRage", "GodOfBonanza", "PharaohsGold"]
+    PROVIDER_NAMES = ["DualBet", "QuickSpin", "Evolution", "PragmaticPlay"]
+    GAME_CATEGORIES = ["Slot", "Table", "LiveCasino", "InstantWin"]
+    GAME_THEMES = ["Mythology", "Asian", "Adventure", "Viking", "Horror", "Sport", "Classic"]
+    DEVICES = ["Mobile", "Desktop", "Tablet"]
+    OS_TYPES = ["iOS", "Android", "Windows", "MacOS"]
+    BROWSERS = ["Chrome", "Safari", "Edge", "Firefox"]
+    VIP_LEVELS = ["Bronze", "Silver", "Gold", "Platinum", "VIP"]
+    PROMO_CODES = ["BONUS2025", "WELCOME100", "FREECHIPS", None, ""]
+    PAYMENT_METHODS = ["CreditCard", "EWallet", "BankTransfer", "Crypto", "Voucher"]
+    DEPOSIT_CHANNELS = ["Trustly", "Skrill", "Neteller", "Visa", "MasterCard"]
+    GAME_MODES = ["Real", "Demo"]
+    CONNECTION_TYPES = ["WiFi", "4G", "5G", "Wired"]    
+    bonus_triggered = random.choice([True, False])
+    jackpot_hit = random.random() < 0.005 
+    free_spins = random.randint(1, 50) if bonus_triggered else 0
+
+    return {
+        "CasinoGame": random.choice(GAME_NAMES),
+        "CasinoProvider": random.choice(PROVIDER_NAMES),
+        "GameCategory": random.choice(GAME_CATEGORIES),
+        "GameTheme": random.choice(GAME_THEMES),
+        "GameRTP": round(random.uniform(92.0, 98.5), 2),
+        "BonusFeatureTriggered": bonus_triggered,
+        "FreeSpinsCount": free_spins,
+        "JackpotHit": jackpot_hit,
+        "DeviceType": random.choice(DEVICES),
+        "OS": random.choice(OS_TYPES),
+        "Browser": random.choice(BROWSERS),
+        "Language": fake.language_code(),
+        "Country": fake.country_code(),
+        "VIPLevel": random.choice(VIP_LEVELS),
+        "PromoCodeUsed": random.choice(PROMO_CODES) if random.random() < 0.2 else None,
+        "PaymentMethod": random.choice(PAYMENT_METHODS),
+        "DepositChannel": random.choice(DEPOSIT_CHANNELS),
+        "GameMode": random.choice(GAME_MODES),
+        "ConnectionType": random.choice(CONNECTION_TYPES)
+    }
+
+
 def generate_good_data(user_id, session_id, amount, event_timestamp):
     
     tx_options = ['bet', 'win', 'deposit', 'withdraw']
@@ -88,11 +130,16 @@ def generate_good_data(user_id, session_id, amount, event_timestamp):
         "currency": fake.currency_code(),
         "amount": amount,
         "event_time": event_timestamp,
-        "metadata": "some metadata"
     }
     
     if data["tx_type"]=='deposit' or data['tx_type']=='withdraw':
         data['amount'] = - data['amount']
+
+    if data['product']=='casino':
+        data['metadata']=json.dumps(generate_metadata())
+        print(data)
+    else:
+        data['metadata']='random metadata'
 
     return data
 
@@ -144,7 +191,7 @@ def start_streaming():
 
                 producer.flush()
 
-            time.sleep(0.01)
+            time.sleep(0.1)
 
     except Exception as e:
         print(f"ERROR: Neočekivana greška tokom striminga: {e}")

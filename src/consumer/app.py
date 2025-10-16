@@ -85,6 +85,18 @@ def insert_rejected(row, client):
     except Exception as e:
         print(f"ERROR:Greška pri batch upisu u ClickHouse tabelu *rejected_events*: {e}", row)
 
+def insert_casino(row,client):
+    column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata']
+    try:
+        client.execute(
+            f'INSERT INTO casino_transactions ({", ".join(column_names)}) VALUES',
+            [row]
+        )
+        print(f"INFO:Uspešno upisan u ClickHouse tabelu *casino_transactions*.")
+        
+    except Exception as e:
+        print(f"ERROR:Greška pri batch upisu u ClickHouse tabelu *casino_transactions*: {e}", row)   
+
 def validate_and_transform_row(data, client):
     to_reject = False
     rejection_reason = ""
@@ -177,7 +189,12 @@ def validate_and_transform_row(data, client):
             event_time_dt,
             data['metadata'],
         )
-        return row
+        if data['product']=='casino':
+            print(data)
+            insert_casino(row,client)
+            return None
+        else:
+            return row
 
 def insert_pipeline_metrics(client, metric_data):
     column_names = ['batch_size','failed_insert_size', 'num_rejected']
