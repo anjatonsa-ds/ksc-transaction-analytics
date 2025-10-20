@@ -10,13 +10,13 @@ Kako bi prethodni izveštaji ostali nepromenjeni, napravljena je nova tabela *ca
 
 ### 2. Dopuna novog Bussnies dashboard-a
 
-- Zadatak 1: Najprofitabilnije casino igre
+- Zadatak 1: Najprofitabilnije casino igre.
 ![zad 1](assets/oct_16_zad1.png)
 
 
-- Zadatak 2: Aktivnost korisnika po uredjajima
+- Zadatak 2: Aktivnost korisnika po uredjajima.
 ![zad 2](assets/oct_16_zad2.png)
 
 
-- Zadatak 3: VIP segment analiza
+- Zadatak 3: VIP segment analiza.
 ![zad 3](assets/oct_16_zad3.png)
