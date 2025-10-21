@@ -2,10 +2,14 @@ import os
 import json
 import time, datetime
 from threading import Thread
+import uuid
 from kafka import KafkaConsumer
 from clickhouse_driver import Client
 from iso4217 import Currency
 from flask import Flask, jsonify 
+import joblib 
+import pandas as pd
+
 
 KAFKA_TOPIC = os.environ.get('KAFKA_TOPIC', 'transaction_events')
 KAFKA_BROKER_URL = os.environ.get('KAFKA_BROKER_URL')
@@ -26,6 +30,13 @@ GLOBAL_METRICS = {
     'last_batch_size': 0,
     'last_insert_duration_s': 0.0,
 }
+try:
+    ai_model = joblib.load("model.pkl")
+    TRAINING_FEATURES = joblib.load("features.pkl")
+    print("AI model loaded.")
+except Exception as e:
+    print(f"FATAL:Greška pri učitavanju modela: {e}")
+    
 
 if not all([KAFKA_BROKER_URL, CH_HOST, CH_USER, CH_PASSWORD]):
     print("FATAL: Nedostaju parametri za povezivanje sa Kafka/ClickHouse.")
@@ -65,8 +76,8 @@ def get_clickhouse_client():
 
 def is_iso4217_currency_code(code):
     
-    if code == 'XXX':  #ISO 4217 validan ali nekoristan za transakcionu analizu
-        return False
+    #if code == 'XXX':  #ISO 4217 validan ali nekoristan za transakcionu analizu
+        #return False
     try:
         Currency(code)
         return True
@@ -101,59 +112,58 @@ def validate_and_transform_row(data, client):
     to_reject = False
     rejection_reason = ""
     rej_reasons=[]
-    current_time_s = time.time()
     event_time_dt = None
-    ingestion_lag_seconds = None
+
 
     if not data['event_id']:
-        print("WARNING: Nedostaje event_id.")
+        #print("WARNING: Nedostaje event_id.")
         rejection_reason+="miss_evnt_id "
         rej_reasons.append("Missing event_id.")
         to_reject=True
     
     if not data['user_id']:
-        print("WARNING: Nedostaje user_id.")
+        #print("WARNING: Nedostaje user_id.")
         rejection_reason+="miss_usr_id "
         rej_reasons.append("Missing user_id.")
         to_reject=True
     
     if not data['session_id']:
-        print("WARNING: Nedostaje session_id.")
+        #print("WARNING: Nedostaje session_id.")
         rejection_reason+="miss_ses_id "
         rej_reasons.append("Missing session_id.")
         to_reject=True
 
     #validacija valuta
     if not is_iso4217_currency_code(data['currency']):
-        print("WARNING: Currency vrednost nije validna.")
+        #print("WARNING: Currency vrednost nije validna.")
         rejection_reason+="curr_not_valid "
         rej_reasons.append("Currency value not valid.")
         to_reject=True
 
     #provera tipa transakcije
     if not data['tx_type'] in ['bet', 'win', 'deposit', 'withdraw']:
-        print("WARNING: Tip transakcije nije validan.")
+        #print("WARNING: Tip transakcije nije validan.")
         rejection_reason+="tx_type_not_valid "
         rej_reasons.append("Transaction type is not valid.")
         to_reject=True
     
     #provera tipa product
     if not data['product'] in ['sportsbook', 'casino', 'virtual']:
-        print("WARNING: Tip producta nije validan.")
+        #print("WARNING: Tip producta nije validan.")
         rejection_reason+='product_not_valid '
         rej_reasons.append("Product type is not valid.")
         to_reject=True
 
     #provera negativnih iznosa
     if data['amount'] < 0 and not (data['tx_type']=='deposit' or data['tx_type']=='withdraw'):
-        print("WARNING: Amount<0 za nevalidan tip transakcije.")
+        #print("WARNING: Amount<0 za nevalidan tip transakcije.")
         rejection_reason+="amnt_not_valid "
         rej_reasons.append("Amount<0 for invalid type of transaction.")
         to_reject=True
 
     #timestamp konverzija
     if data['event_time'] > time.time():
-        print("WARNING: Timestamp transakcije je u buducnosti.")
+        #print("WARNING: Timestamp transakcije je u buducnosti.")
         rejection_reason+="ts_not_valid"
         rej_reasons.append("Timestamp is in the future.")
         to_reject=True
@@ -161,6 +171,7 @@ def validate_and_transform_row(data, client):
     else:    
         event_time_dt = datetime.datetime.fromtimestamp(data['event_time'], tz=datetime.timezone.utc)
 
+    print("WARNING:", rej_reasons)
     if to_reject:
         row = (
             rejection_reason,
@@ -175,7 +186,7 @@ def validate_and_transform_row(data, client):
             event_time_dt,
             data['metadata']
         )
-        insert_rejected(row, client)
+        #insert_rejected(row, client)
         return None
     else:
         row = (
@@ -191,10 +202,55 @@ def validate_and_transform_row(data, client):
         )
         if data['product']=='casino':
             print(data)
-            insert_casino(row,client)
+            #insert_casino(row,client)
             return None
         else:
+
+            anomaly_score = prepare_row_for_model(data)
+            row = (
+                data['event_id'],
+                data['user_id'],
+                data['session_id'],
+                data['product'],
+                data['tx_type'],
+                data['currency'],
+                data['amount'],
+                event_time_dt,
+                data['metadata'],
+                anomaly_score
+            )
+            #print("Row with anomaly score",row)
+            #return None
             return row
+        
+def prepare_row_for_model(data):
+    user_mod = 0
+    try:
+        user_uuid = uuid.UUID(data['user_id'])
+        user_mod = user_uuid.int % 10
+    except (ValueError, TypeError):
+        user_mod = 9
+
+    event_time_dt = datetime.datetime.fromtimestamp(data['event_time'], tz=datetime.timezone.utc)
+    hour_of_day = event_time_dt.hour if event_time_dt else 0 
+    print(hour_of_day, 'hour')
+
+    row_df = pd.DataFrame({
+        'amount': [data['amount']],
+        'hour_of_day': [hour_of_day],
+        'currency': [data['currency']],
+        'user_id_mod': [user_mod]
+    })
+    
+    row_df_encoded = pd.get_dummies(row_df, columns=['currency'], prefix='curr', drop_first=True)
+    
+    final_features_df = row_df_encoded.reindex(columns=TRAINING_FEATURES, fill_value=0)
+            
+    anomaly_prediction = ai_model.predict(final_features_df)[0]
+    anomaly_score_db = 1 if anomaly_prediction == -1 else 0
+
+    return anomaly_score_db
+
 
 def insert_pipeline_metrics(client, metric_data):
     column_names = ['batch_size','failed_insert_size', 'num_rejected']
@@ -210,7 +266,8 @@ def insert_pipeline_metrics(client, metric_data):
 def parse_and_insert_batch(consumer, client, batch):
     print(f"INFO - Batch insert, size {len(batch)}")
     rows_to_insert = []    
-    column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata']
+    column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata', 'anomaly_score']
+
     rejected_count = 0 
 
     for message in batch:
@@ -239,7 +296,7 @@ def parse_and_insert_batch(consumer, client, batch):
         for attempt in range(MAX_RETRIES):
             try:
                 client.execute(
-                    f'INSERT INTO transaction_events ({", ".join(column_names)}) VALUES',
+                    f'INSERT INTO transaction_events_anomaly ({", ".join(column_names)}) VALUES',
                     rows_to_insert
                 )
                 print(f"INFO: Uspešno upisano {len(rows_to_insert)} redova u ClickHouse nakon {attempt + 1}. pokušaja.")
@@ -265,7 +322,7 @@ def parse_and_insert_batch(consumer, client, batch):
         rejected_count
     )
     print(f"INFO: Neuspešno upisano {failed_count} redova u ClickHouse. Broj odbijenih poruka u batch-u {rejected_count}")
-    insert_pipeline_metrics(client, metric_data)
+    #insert_pipeline_metrics(client, metric_data)
     consumer.commit()
 
 def start_consuming(consumer, client):

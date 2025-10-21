@@ -2,3 +2,6 @@ kafka-python
 clickhouse_driver
 iso4217
 flask
+joblib
+scikit-learn
+pandas

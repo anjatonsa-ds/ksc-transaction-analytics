@@ -157,3 +157,21 @@ SELECT
     avg(JSONExtractFloat(raw_metadata_json, 'TotalBetAmount'))
 FROM
     transaction_events;
+
+
+--Table for anomaly checks
+CREATE TABLE IF NOT EXISTS transaction_events_anomaly (
+    event_id    String,    
+    user_id     String,   
+    session_id  String,  
+    product     LowCardinality(String),
+    tx_type     LowCardinality(String),
+    currency    LowCardinality(String),
+    amount      Float32,
+    event_time  DateTime64(3),  
+    metadata    String,
+    anomaly_score UInt8 DEFAULT 0,
+    ingestion_time DateTime64(3) DEFAULT now()
+)
+ENGINE = ReplacingMergeTree() 
+ORDER BY (event_id, event_time);

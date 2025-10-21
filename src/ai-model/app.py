@@ -5,10 +5,10 @@ import joblib
 
 
 try:
-    df = pd.read_csv('random_transactions.csv', header=None)
+    df = pd.read_csv('random_transactions_10k.csv', header=None)
     df.columns = ['amount', 'hour_of_day', 'currency', 'user_id_mod']
 except FileNotFoundError:
-    print("GREŠKA: Datoteka 'random_transactions.csv' nije pronađena. Proverite putanju.")
+    print("GREŠKA: Datoteka 'random_transactions_10k.csv' nije pronađena. Proverite putanju.")
     exit()
 except ValueError:
     print("GREŠKA: Broj kolona u CSV fajlu se ne slaže sa definisanim (amount, hour_of_day, currency, user_id_mod).")
@@ -17,13 +17,14 @@ except ValueError:
 # One-Hot Encoding za kodiranje 'currency' vrednosti
 df_encoded = pd.get_dummies(df, columns=['currency'], prefix='curr', drop_first=True)
 TRAINING_FEATURES = df_encoded.columns.tolist()
+joblib.dump(TRAINING_FEATURES, "features_10k.pkl")
 
 print(df_encoded.head())
 
 # Parametri za IsolationForest
-N_ESTIMATORS = 100
-CONTAMINATION = 0.01 
-MAX_SAMPLES = 256
+N_ESTIMATORS = 300
+CONTAMINATION = 0.05 
+MAX_SAMPLES = 10000
 
 iso_forest = IsolationForest(n_estimators=N_ESTIMATORS,
                              contamination=CONTAMINATION,
@@ -32,7 +33,7 @@ iso_forest = IsolationForest(n_estimators=N_ESTIMATORS,
                              n_jobs=-1)
 
 iso_forest.fit(df_encoded)
-MODEL_FILE = "model.pkl"
+MODEL_FILE = "model_10k.pkl"
 joblib.dump(iso_forest, MODEL_FILE)
 print(f"Model je uspešno sačuvan kao: {MODEL_FILE}")
 
@@ -67,5 +68,6 @@ plt.scatter(normal['amount'], normal['hour_of_day'], label='Normal')
 plt.scatter(anomalies['amount'], anomalies['hour_of_day'], label='Anomaly')
 plt.xlabel("amount")
 plt.ylabel("hour_of_day")
+plt.xlim(-1000, 1000)
 plt.legend()
 plt.show()

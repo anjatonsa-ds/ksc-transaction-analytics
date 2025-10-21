@@ -25,7 +25,7 @@ IsolationForest algoritam je baziran na stablima (sličan RandomForest algoritmu
 Koraci u algoritmu:
 1) U koren se smeštaju sve ili deo instanci.
 2) Selektuje se random karakteristika.
-3) Random se slektuje vrednost podele koja se nalazi u opsegu za selktovanu karakteristiku.
+3) Random se selektuje vrednost podele koja se nalazi u opsegu za selektovanu karakteristiku.
 4) Podaci se dele u 2 čvora na osnovu vrednosti podele.
 5) Proces se ponavlja rekurzivno za svaki child čvor dok se ne ispuni jedan od 2 uslova: Svaki list ima samo jednu instancu. Predefinisana dubina stabla je dostignuta.
 
