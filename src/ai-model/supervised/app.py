@@ -90,7 +90,7 @@ plt.scatter(
     normal['hour_of_day'], 
     normal['amount'], 
     color='green', 
-    label='Normal (0)', 
+    label='Normal', 
     alpha=0.6,
     s=50
 )
@@ -99,33 +99,34 @@ plt.scatter(
     anomaly['hour_of_day'], 
     anomaly['amount'], 
     color='red', 
-    label='Anomaly (1)', 
+    label='Anomaly', 
     alpha=0.9,
     marker='X',
     s=100
 )
 
-for i, row in df_new_test.iterrows():
-    if row['predicted_anomaly'] == 1:
-        plt.scatter(
-            row['hour_of_day'], 
-            row['amount'], 
-            color='blue', 
-            marker='x',
-            s=100,            
-            alpha=0.9,
-            linewidth=1.5,
-            label='Anomaly'
-        )
-for i, row in df_new_test.iterrows():
-    if row['predicted_anomaly'] == 0:
-        plt.scatter(
-            row['hour_of_day'], 
-            row['amount'], 
-            color='blue', 
-            linewidth=1.5,
-            label="Test - not anomaly"
-        )
+normal = df_new_test[df_new_test['predicted_anomaly'] == 0]
+anomaly = df_new_test[df_new_test['predicted_anomaly'] == 1]
+
+
+plt.scatter(
+    anomaly['hour_of_day'], 
+    anomaly['amount'], 
+    color='blue', 
+    marker='x',
+    s=100,            
+    alpha=0.9,
+    linewidth=1.5,
+    label='Test - anomaly'
+)
+
+plt.scatter(
+    normal['hour_of_day'], 
+    normal['amount'], 
+    color='blue', 
+    linewidth=1.5,
+    label="Test - not anomaly"
+)
 
 plt.title('Casino Transaction Anomaly Visualization (Amount vs. Time of Day)')
 plt.xlabel('Hour of Day')
