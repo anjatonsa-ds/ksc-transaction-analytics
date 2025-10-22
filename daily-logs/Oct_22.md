@@ -17,7 +17,7 @@ Ciklično kodiranje ('hour_of_day') pomoću sinusa i kosinusa za bolji prikaz ci
 
 Iskorišćen je algoritam LogisticRegression.
 
-Kreirana su 3 test slučaja od kojih jedan predstavlja veštački pripremljenu anomaliju odnosno vrednost transakcije koja je izuzetno velika za izabrano doba dana. Transakcije su vizuelizovane na grafiku i vidi se da su test podaci su dobro klasifikovani u klase.
+Kreirana su 3 test slučaja od kojih jedan predstavlja veštački pripremljenu anomaliju odnosno vrednost transakcije koja je izuzetno velika za izabrano doba dana. Transakcije su vizuelizovane na grafiku i vidi se da su test podaci dobro klasifikovani u klase.
 
 ![Prikaz anomalija](./assets/oct_22_anomaly_visualization.png)
 
