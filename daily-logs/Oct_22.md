@@ -11,7 +11,7 @@ Kreiran je skup podataka koji ima 15 normalnih transakcija i i par velikih trans
 
 Pripremljeni su feature-i za model:
 
-Ciklično kodiranje ('hour_of_day') pomoću sinusa i kosinusa za bolji prikaz ciklusa vremena, kako se ne bi tumačio linearno 0-23 kao sto se amount tumači linearno. Kreiran je feature apsolutne vrednosti ('abs_amount'). Kategoričke varijable ('tx_type', 'currency') su kodirane pomoći One-Hot Encoder-a. Implementiran StandardScaler za skaliranje numeričkih feature-a.
+Ciklično kodiranje ('hour_of_day') pomoću sinusa i kosinusa za bolji prikaz ciklusa vremena, kako se ne bi tumačio linearno 0-23 kao sto se amount tumači linearno. Kreiran je feature apsolutne vrednosti ('abs_amount'). Kategoričke varijable ('tx_type', 'currency') su kodirane pomoću One-Hot Encoder-a. Implementiran StandardScaler za skaliranje numeričkih feature-a.
 
 ### 3. Treniranje modela i validacija
 
