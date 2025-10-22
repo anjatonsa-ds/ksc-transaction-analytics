@@ -132,7 +132,7 @@ def generate_good_data(user_id, session_id, amount, event_timestamp):
         "event_time": event_timestamp,
     }
     
-    if data["tx_type"]=='deposit' or data['tx_type']=='withdraw':
+    if data["tx_type"]=='bet' or data['tx_type']=='withdraw':
         data['amount'] = - data['amount']
 
     if data['product']=='casino':
