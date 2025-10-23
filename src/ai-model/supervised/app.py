@@ -5,6 +5,8 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression 
+import joblib 
+
 
 df = pd.read_csv('data.csv')
 df.drop(columns=['description'], inplace=True)
@@ -137,4 +139,9 @@ plt.ylim(-9500, 9500)
 plt.legend()
 plt.tight_layout()
 plt.show()
+
+
+MODEL_FILE = "model_reg.pkl"
+joblib.dump(model_pipeline, MODEL_FILE)
+print(f"Model je uspešno sačuvan kao: {MODEL_FILE}")
 

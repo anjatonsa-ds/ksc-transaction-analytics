@@ -9,6 +9,7 @@ from iso4217 import Currency
 from flask import Flask, jsonify 
 import joblib 
 import pandas as pd
+import numpy as np
 
 
 KAFKA_TOPIC = os.environ.get('KAFKA_TOPIC', 'transaction_events')
@@ -31,8 +32,7 @@ GLOBAL_METRICS = {
     'last_insert_duration_s': 0.0,
 }
 try:
-    ai_model = joblib.load("model.pkl")
-    TRAINING_FEATURES = joblib.load("features.pkl")
+    ai_model = joblib.load("model_reg.pkl")
     print("AI model loaded.")
 except Exception as e:
     print(f"FATAL:Greška pri učitavanju modela: {e}")
@@ -83,7 +83,16 @@ def is_iso4217_currency_code(code):
         return True
     except ValueError:
         return False
-    
+
+def apply_cyclical_encoding(df, col, max_val):
+    df[col + '_sin'] = np.sin(2 * np.pi * df[col] / max_val)
+    df[col + '_cos'] = np.cos(2 * np.pi * df[col] / max_val)
+    return df
+
+
+
+
+
 def insert_rejected(row, client):
     column_names = [ 'rejection_reason','rej_reasons','event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata']
     try:
@@ -239,15 +248,17 @@ def prepare_row_for_model(data):
         'amount': [data['amount']],
         'hour_of_day': [hour_of_day],
         'currency': [data['currency']],
-        'user_id_mod': [user_mod]
+        'user_id_mod': [user_mod],
+        'tx_type':[data['tx_type']]
     })
     
-    row_df_encoded = pd.get_dummies(row_df, columns=['currency'], prefix='curr', drop_first=True)
-    
-    final_features_df = row_df_encoded.reindex(columns=TRAINING_FEATURES, fill_value=0)
-            
-    anomaly_prediction = ai_model.predict(final_features_df)[0]
-    anomaly_score_db = 1 if anomaly_prediction == -1 else 0
+    row_df['abs_amount'] = np.abs(row_df['amount'])
+    row_df = apply_cyclical_encoding(row_df, 'hour_of_day', 24)
+    row_df = row_df.drop('hour_of_day', axis=1)
+    raw_features_for_pipeline = ['amount', 'abs_amount', 'hour_of_day_sin', 'hour_of_day_cos', 'tx_type', 'currency', 'user_id_mod']
+    X_predict = row_df[raw_features_for_pipeline]
+    anomaly_prediction = ai_model.predict(X_predict)[0]
+    anomaly_score_db = int(anomaly_prediction)
 
     return anomaly_score_db
 
