@@ -89,40 +89,35 @@ def apply_cyclical_encoding(df, col, max_val):
     df[col + '_cos'] = np.cos(2 * np.pi * df[col] / max_val)
     return df
 
-
-
-
-
-def insert_rejected(row, client):
+def insert_rejected_rows(rows, client):
     column_names = [ 'rejection_reason','rej_reasons','event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata']
     try:
         client.execute(
             f'INSERT INTO rejected_events ({", ".join(column_names)}) VALUES',
-            [row]
+            rows
         )
-        print(f"INFO:Uspešno upisan u ClickHouse tabelu *rejected_events*.")
+        print(f"INFO:Uspešno upisano {len(rows)} redova u ClickHouse tabelu *rejected_events*.")
+
         
     except Exception as e:
-        print(f"ERROR:Greška pri batch upisu u ClickHouse tabelu *rejected_events*: {e}", row)
+        print(f"ERROR:Greška pri batch upisu u ClickHouse tabelu *rejected_events*: {e}")
 
-def insert_casino(row,client):
-    column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata']
+def insert_rows(rows,client):
+    column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'event_time_send','metadata', 'anomaly_score']
     try:
         client.execute(
-            f'INSERT INTO casino_transactions ({", ".join(column_names)}) VALUES',
-            [row]
+            f'INSERT INTO transaction_events_anomaly ({", ".join(column_names)}) VALUES',
+            rows
         )
-        print(f"INFO:Uspešno upisan u ClickHouse tabelu *casino_transactions*.")
-        
+        print(f"INFO:Uspešno upisano {len(rows)} redova u ClickHouse tabelu *transaction_events_anomaly*.")
     except Exception as e:
-        print(f"ERROR:Greška pri batch upisu u ClickHouse tabelu *casino_transactions*: {e}", row)   
+        print(f"ERROR:Greška pri batch upisu u ClickHouse tabelu *transaction_events_anomaly*: {e}")
 
 def validate_and_transform_row(data, client):
     to_reject = False
     rejection_reason = ""
     rej_reasons=[]
     event_time_dt = None
-
 
     if not data['event_id']:
         #print("WARNING: Nedostaje event_id.")
@@ -164,13 +159,14 @@ def validate_and_transform_row(data, client):
         to_reject=True
 
     #provera negativnih iznosa
-    if data['amount'] < 0 and not (data['tx_type']=='deposit' or data['tx_type']=='withdraw'):
+    if data['amount'] < 0 and not (data['tx_type']=='bet' or data['tx_type']=='withdraw'):
         #print("WARNING: Amount<0 za nevalidan tip transakcije.")
         rejection_reason+="amnt_not_valid "
         rej_reasons.append("Amount<0 for invalid type of transaction.")
         to_reject=True
 
     #timestamp konverzija
+    ''' 
     if data['event_time'] > time.time():
         #print("WARNING: Timestamp transakcije je u buducnosti.")
         rejection_reason+="ts_not_valid"
@@ -179,6 +175,9 @@ def validate_and_transform_row(data, client):
         event_time_dt=None
     else:    
         event_time_dt = datetime.datetime.fromtimestamp(data['event_time'], tz=datetime.timezone.utc)
+    '''
+    event_time_dt = datetime.datetime.fromtimestamp(data['event_time'], tz=datetime.timezone.utc)
+
 
     print("WARNING:", rej_reasons)
     if to_reject:
@@ -195,9 +194,11 @@ def validate_and_transform_row(data, client):
             event_time_dt,
             data['metadata']
         )
-        #insert_rejected(row, client)
-        return None
+        return row, True
     else:
+        anomaly_score = prepare_row_for_model(data)
+        send_event_time_dt = datetime.datetime.fromtimestamp(data['event_time_send'], tz=datetime.timezone.utc)
+
         row = (
             data['event_id'],
             data['user_id'],
@@ -207,30 +208,11 @@ def validate_and_transform_row(data, client):
             data['currency'],
             data['amount'],
             event_time_dt,
+            send_event_time_dt,
             data['metadata'],
+            anomaly_score
         )
-        if data['product']=='casino':
-            print(data)
-            #insert_casino(row,client)
-            return None
-        else:
-
-            anomaly_score = prepare_row_for_model(data)
-            row = (
-                data['event_id'],
-                data['user_id'],
-                data['session_id'],
-                data['product'],
-                data['tx_type'],
-                data['currency'],
-                data['amount'],
-                event_time_dt,
-                data['metadata'],
-                anomaly_score
-            )
-            #print("Row with anomaly score",row)
-            #return None
-            return row
+        return row, False
         
 def prepare_row_for_model(data):
     user_mod = 0
@@ -262,7 +244,6 @@ def prepare_row_for_model(data):
 
     return anomaly_score_db
 
-
 def insert_pipeline_metrics(client, metric_data):
     column_names = ['batch_size','failed_insert_size', 'num_rejected']
     try:
@@ -275,21 +256,21 @@ def insert_pipeline_metrics(client, metric_data):
         print(f"ERROR: Neuspeli upis metrika u pipeline_metrics: {e}")
 
 def parse_and_insert_batch(consumer, client, batch):
+
     print(f"INFO - Batch insert, size {len(batch)}")
     rows_to_insert = []    
-    column_names = ['event_id', 'user_id', 'session_id', 'product','tx_type', 'currency', 'amount', 'event_time', 'metadata', 'anomaly_score']
-
+    rejected_rows_to_insert = []    
     rejected_count = 0 
 
     for message in batch:
         try:
             data = message.value 
-            row = validate_and_transform_row(data, client)
-            if row:
-                rows_to_insert.append(row)  
-            else: 
+            row, rejceted = validate_and_transform_row(data, client)
+            if rejceted:
                 rejected_count += 1
-            
+                rejected_rows_to_insert.append(row)
+            else: 
+                rows_to_insert.append(row)  
         except Exception as e:
             print(f"ERROR: Greška pri parsiranju poruke: {e}. Poruka: {message.value}")
     
@@ -303,21 +284,31 @@ def parse_and_insert_batch(consumer, client, batch):
     if rows_to_insert:
         MAX_RETRIES = 3
         PAUSE_SECONDS = 5
-
         for attempt in range(MAX_RETRIES):
             try:
-                client.execute(
-                    f'INSERT INTO transaction_events_anomaly ({", ".join(column_names)}) VALUES',
-                    rows_to_insert
-                )
-                print(f"INFO: Uspešno upisano {len(rows_to_insert)} redova u ClickHouse nakon {attempt + 1}. pokušaja.")
+                insert_rows(rows_to_insert,client)
                 break 
-                
             except Exception as e:
-                print(f"WARNING: Neuspeli batch upis u ClickHouse (Pokušaj {attempt + 1}/{MAX_RETRIES}): {e}")
+                print(f"WARNING: Neuspeli batch upis u transaction_events_anomaly tabelu (Pokušaj {attempt + 1}/{MAX_RETRIES}): {e}")
                 if attempt == MAX_RETRIES - 1:
                     print(f"FATAL: Svi pokušaji upisa ({MAX_RETRIES}) su propali. Odbacivanje batcha zbog perzistentne greške.")
-                    failed_count = len(rows_to_insert)
+                    failed_count = failed_count + len(rows_to_insert)
+                else:
+                    print(f"INFO: Pauziranje na {PAUSE_SECONDS} sekundi pre sledećeg pokušaja...")
+                    time.sleep(PAUSE_SECONDS)
+    
+    if rows_to_insert:
+        MAX_RETRIES = 3
+        PAUSE_SECONDS = 5
+        for attempt in range(MAX_RETRIES):
+            try:
+                insert_rejected_rows(rejected_rows_to_insert,client)
+                break 
+            except Exception as e:
+                print(f"WARNING: Neuspeli batch upis u rejected_evnets tabelu (Pokušaj {attempt + 1}/{MAX_RETRIES}): {e}")
+                if attempt == MAX_RETRIES - 1:
+                    print(f"FATAL: Svi pokušaji upisa ({MAX_RETRIES}) su propali. Odbacivanje batcha zbog perzistentne greške.")
+                    failed_count = failed_count + len(rows_to_insert)
                 else:
                     print(f"INFO: Pauziranje na {PAUSE_SECONDS} sekundi pre sledećeg pokušaja...")
                     time.sleep(PAUSE_SECONDS)
@@ -325,15 +316,17 @@ def parse_and_insert_batch(consumer, client, batch):
     insert_duration_s = time.time() - insert_start_time
     GLOBAL_METRICS['last_insert_duration_s'] = insert_duration_s
 
-    print(f"INFO: Uspešno upisano {len(rows_to_insert)} redova u ClickHouse za {insert_duration_s}s.")
+    print(f"INFO: Uspešno upisano {len(batch)-failed_count} redova u ClickHouse za {insert_duration_s}s.")
+    print(f"INFO: Neuspešno upisano {failed_count} redova u ClickHouse. Broj odbijenih poruka u batch-u {rejected_count}")
+
     
     metric_data = (
         len(batch),
         failed_count,
         rejected_count
     )
-    print(f"INFO: Neuspešno upisano {failed_count} redova u ClickHouse. Broj odbijenih poruka u batch-u {rejected_count}")
-    #insert_pipeline_metrics(client, metric_data)
+    
+    insert_pipeline_metrics(client, metric_data)
     consumer.commit()
 
 def start_consuming(consumer, client):

@@ -56,11 +56,29 @@ CREATE TABLE IF NOT EXISTS rejected_events (
     amount      Float32,
     event_time  Nullable(DateTime64(3)),  
     metadata    String,
-    ingestion_time DateTime64(3) DEFAULT now(),
+    ingestion_time DateTime64(3) DEFAULT now64(),
     INDEX rej_res_tokenized(rejection_reason) TYPE text(tokenizer = 'split', separators = ['\n'])
 )
 ENGINE = MergeTree() 
 ORDER BY (event_id, user_id);
+
+--Table for anomaly checks
+CREATE TABLE IF NOT EXISTS transaction_events_anomaly (
+    event_id    String,    
+    user_id     String,   
+    session_id  String,  
+    product     LowCardinality(String),
+    tx_type     LowCardinality(String),
+    currency    LowCardinality(String),
+    amount      Float32,
+    event_time  DateTime64(3),  
+    event_time_send DateTime64(3),
+    metadata    String,
+    anomaly_score UInt8 DEFAULT 0,
+    ingestion_time DateTime64(3) DEFAULT now64()
+)
+ENGINE = ReplacingMergeTree() 
+ORDER BY (event_id, event_time);
 
 --Za DQ report dnevne metrike
 CREATE TABLE IF NOT EXISTS daily_metrics (
@@ -87,12 +105,12 @@ ORDER BY (report_hour);
 -- MV za validne transakcije
 CREATE MATERIALIZED VIEW valid_metrics_mv TO daily_metrics AS
 SELECT
-    toDate(event_time) AS report_date,
+    toDate(event_time_send) AS report_date,
     count() AS valid_messages,
     0 AS rejected_messages,
     count() AS total_messages,
-    avg(ingestion_time - event_time) AS average_lag_seconds
-FROM transaction_events
+    avg(ingestion_time - event_time_send) AS average_lag_seconds
+FROM transaction_events_anomaly
 GROUP BY report_date;
 
 -- MV za odbijene transakcije
@@ -110,12 +128,12 @@ GROUP BY report_date;
 
 CREATE MATERIALIZED VIEW valid_hourly_mv TO hourly_metrics AS
 SELECT
-    toStartOfHour(event_time) AS report_hour,
+    toStartOfHour(event_time_send) AS report_hour,
     count() AS valid_messages,
     0 AS rejected_messages,
     count() AS total_messages,
-    avg(ingestion_time - event_time) AS average_lag_seconds
-FROM transaction_events
+    avg(ingestion_time - event_time_send) AS average_lag_seconds
+FROM transaction_events_anomaly
 GROUP BY report_hour;
 
 CREATE MATERIALIZED VIEW rejected_hourly_mv TO hourly_metrics AS
@@ -136,42 +154,15 @@ CREATE TABLE IF NOT EXISTS pipeline_metrics (
     num_rejected UInt64
 )
 ENGINE = MergeTree()
-ORDER BY (failed_insert_size );
+ORDER BY (failed_insert_size);
 
-CREATE TABLE IF NOT EXISTS casino_transactions (
-    event_id    String,    
-    user_id     String,   
-    session_id  String,  
-    product     LowCardinality(String),
-    tx_type     LowCardinality(String),
-    currency    LowCardinality(String),
-    amount      Float32,
-    event_time  DateTime64(3),  
-    metadata    String,
-    ingestion_time DateTime64(3) DEFAULT now()
-)
-ENGINE = ReplacingMergeTree() 
-ORDER BY (event_id, event_time);
 
+
+
+
+'''
 SELECT
     avg(JSONExtractFloat(raw_metadata_json, 'TotalBetAmount'))
 FROM
     transaction_events;
-
-
---Table for anomaly checks
-CREATE TABLE IF NOT EXISTS transaction_events_anomaly (
-    event_id    String,    
-    user_id     String,   
-    session_id  String,  
-    product     LowCardinality(String),
-    tx_type     LowCardinality(String),
-    currency    LowCardinality(String),
-    amount      Float32,
-    event_time  DateTime64(3),  
-    metadata    String,
-    anomaly_score UInt8 DEFAULT 0,
-    ingestion_time DateTime64(3) DEFAULT now()
-)
-ENGINE = ReplacingMergeTree() 
-ORDER BY (event_id, event_time);
+'''

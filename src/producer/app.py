@@ -55,7 +55,7 @@ def choose_user():
 
     return chosen_user_id, chosen_group
 
-def generate_event_data(session_id, user_data, event_timestamp):
+def generate_event_data(session_id, user_data, event_timestamp, send_timestamp):
 
     user_id = user_data[0]
     chosen_group = user_data[1]
@@ -71,7 +71,7 @@ def generate_event_data(session_id, user_data, event_timestamp):
     if random.random() < 0.20:
         event_data = generate_bad_data(user_id, session_id, amount, event_timestamp)
     else:
-        event_data = generate_good_data(user_id, session_id, amount, event_timestamp)
+        event_data = generate_good_data(user_id, session_id, amount, event_timestamp, send_timestamp)
     return event_data
 
 
@@ -116,7 +116,7 @@ def generate_metadata():
     }
 
 
-def generate_good_data(user_id, session_id, amount, event_timestamp):
+def generate_good_data(user_id, session_id, amount, event_timestamp, send_timestamp):
     
     tx_options = ['bet', 'win', 'deposit', 'withdraw']
     tx_weights = [50, 5, 25, 20]
@@ -130,6 +130,7 @@ def generate_good_data(user_id, session_id, amount, event_timestamp):
         "currency": fake.currency_code(),
         "amount": amount,
         "event_time": event_timestamp,
+        "event_time_send": send_timestamp
     }
     
     if data["tx_type"]=='bet' or data['tx_type']=='withdraw':
@@ -152,7 +153,7 @@ def generate_bad_data(user_id, session_id, amount, event_timestamp):
         "tx_type": random.choice(['bet', 'win', 'deposit', 'withdraw', 'invalid']), 
         "currency": random.choice([fake.currency_code(), 'BAD', 'XXX', 'RSD-INVALID']),
         "amount": random.choice([amount, -amount]), 
-        "event_time": random.choice([event_timestamp * 1000, event_timestamp]),
+        "event_time": event_timestamp,
         "metadata": "data quality test case"
     }
 
@@ -165,18 +166,17 @@ def start_streaming():
             session_id=f"sess_{uuid.uuid4()}"
             user_data = choose_user()
             num_transactions_in_session = random.randint(1, 10)
-            sess_start_time = datetime.now() - timedelta(hours=random.randint(0, 23),
-                                             minutes=random.randint(0, 59),
-                                             seconds=random.randint(0, 59))
-            random_sess_interval = random.uniform(10, 60) #sesija random traje izmedju 10 i 60 min
+            sess_start_time = datetime.now()
+            random_sess_interval = random.uniform(5, 10) #sesija random traje izmedju 5 i 10 min
             sess_end_time = sess_start_time + timedelta(minutes=random_sess_interval)
             total_seconds_in_interval = (sess_end_time - sess_start_time).total_seconds()
 
             for _ in range(num_transactions_in_session):
                 random_seconds  = random.uniform(0, total_seconds_in_interval)
                 event_timestamp = (sess_start_time + timedelta(seconds=random_seconds)).timestamp()
+                send_timestamp = datetime.now().timestamp()
 
-                event_data=generate_event_data(session_id, user_data, event_timestamp)
+                event_data=generate_event_data(session_id, user_data, event_timestamp, send_timestamp)
                 
                 if event_data:
                     key = str(event_data['user_id']).encode('utf-8')
